@@ -1,0 +1,39 @@
+{
+  "_comment": "Backlog: features, bugs and tech debt. JSON (not Markdown) because agents overwrite Markdown less carefully. Single source of truth for the work left. Add items with harness/scripts/feature.sh add; change status with feature.sh <id> <status>.",
+  "_legend": {
+    "type": ["feature", "bug", "debt"],
+    "status": ["todo", "in_progress", "done", "blocked", "cut"],
+    "priority": ["p0", "p1", "p2", "p3"]
+  },
+  "project": "<PROJECT NAME>",
+  "updated": "<YYYY-MM-DD>",
+  "features": [
+    {
+      "id": "F-001",
+      "type": "feature",
+      "name": "<feature name>",
+      "status": "todo",
+      "priority": "p0",
+      "acceptance": "<the test/criteria that proves it works>",
+      "files": ["<likely files to touch>"],
+      "notes": ""
+    },
+    {
+      "id": "F-002",
+      "type": "feature",
+      "name": "<feature name>",
+      "status": "todo",
+      "priority": "p1",
+      "acceptance": "<criteria>",
+      "files": [],
+      "notes": ""
+    }
+  ],
+  "milestones": [
+    {
+      "name": "MVP",
+      "features": ["F-001", "F-002"],
+      "definition_of_done": "<what must be true for this milestone>"
+    }
+  ]
+}
