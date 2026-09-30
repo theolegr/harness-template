@@ -9,6 +9,10 @@ migrations without confirmation". This makes it mechanical:
   ask   → needs a human: migrations, DROP/TRUNCATE, deploys
           (in a non-interactive run, e.g. loop.sh, "ask" means refused)
 
+Commands are split quote-aware (a `|` inside a grep pattern is not a pipe), and
+what a line hands to a shell (`bash -c "…"`, `eval`, a heredoc fed to `sh`) is
+checked too. Tests: tests/test_guard_bash.py in the template repo.
+
 Edit the lists below per project. Anything not matched goes through the normal
 permission flow.
 """
@@ -30,17 +34,94 @@ ASK = [
 ]
 
 
-def segments(cmd):
-    """Split a shell line into simple commands (on ; && || | and newlines)."""
-    for part in re.split(r"[;&|\n]+", cmd):
-        try:
-            toks = shlex.split(part)
-        except ValueError:
-            toks = part.split()
-        while toks and (toks[0] in ("sudo", "command", "exec") or "=" in toks[0]):
-            toks = toks[1:]
-        if toks:
-            yield toks
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
+OPS = "();<>|&\n"
+# a heredoc marker (<<EOF, <<-'EOF', <<"EOF"), not a here-string (<<<)
+HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+
+
+def split_commands(cmd):
+    """Split a shell line into simple commands on ; && || | ( ) and newlines.
+
+    Quote-aware: a | or ; inside quotes is text (e.g. a grep pattern), not a
+    separator. '#' is not treated as a comment: shlex would swallow the newline
+    that ends it, and the next line's command with it."""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=OPS)
+    lex.whitespace_split = True
+    lex.whitespace = " \t\r"
+    lex.commenters = ""
+    try:
+        toks = list(lex)
+    except ValueError:                  # unbalanced quotes: coarse split, errs on catching
+        return [p.split() for p in re.split(r"[;&|\n]+", cmd) if p.split()]
+    segs, cur = [], []
+    for t in toks:
+        if t and set(t) <= set(OPS):
+            if cur:
+                segs.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    if cur:
+        segs.append(cur)
+    return segs
+
+
+def strip_prefix(toks):
+    while toks and (toks[0] in ("sudo", "command", "exec", "env", "nohup", "time", "nice")
+                    or "=" in toks[0]):
+        toks = toks[1:]
+    return toks
+
+
+def prog_of(toks):
+    return toks[0].rsplit("/", 1)[-1]
+
+
+def split_heredocs(cmd):
+    """Take heredoc bodies out of the command line: they are data, not commands —
+    unless they are fed to a shell, in which case they are returned to be checked."""
+    lines, out, to_shell, i = cmd.split("\n"), [], [], 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        i += 1
+        for m in HEREDOC.finditer(line):
+            dash, delim, body = m.group(1), m.group(3), []
+            while i < len(lines):
+                end = lines[i].lstrip("\t") if dash else lines[i]
+                i += 1
+                if end == delim:
+                    break
+                body.append(lines[i - 1])
+            head = [strip_prefix(s) for s in split_commands(line[:m.start()])]
+            head = [s for s in head if s]
+            if head and prog_of(head[-1]) in SHELLS:
+                to_shell.append("\n".join(body))
+    return "\n".join(out), to_shell
+
+
+def segments(cmd, depth=0):
+    """Every simple command the line would run, including what it hands to a
+    shell: `bash -c "…"`, `eval "…"`, and heredocs fed to a shell."""
+    text, nested = split_heredocs(cmd)
+    for toks in split_commands(text):
+        toks = strip_prefix(toks)
+        if not toks:
+            continue
+        yield toks
+        prog, args = prog_of(toks), toks[1:]
+        if prog in SHELLS:
+            for j, a in enumerate(args):
+                if a.startswith("-") and not a.startswith("--") and "c" in a[1:]:
+                    if j + 1 < len(args):
+                        nested.append(args[j + 1])
+                    break
+        elif prog == "eval":
+            nested.append(" ".join(args))
+    if depth < 3:
+        for sub in nested:
+            yield from segments(sub, depth + 1)
 
 
 def deny_reason(toks):
@@ -80,23 +161,31 @@ def decide(kind, reason):
     sys.exit(0)
 
 
+def check(cmd):
+    """→ ("deny" | "ask", reason), or (None, None) when the command is fine."""
+    segs = list(segments(cmd))
+    for toks in segs:
+        reason = deny_reason(toks)
+        if reason:
+            return "deny", reason
+    for toks in segs:
+        # a word in a commit message or a search is not an action
+        if prog_of(toks) in ("git", "echo", "printf", "grep", "rg"):
+            continue
+        for pattern, reason in ASK:
+            if re.search(pattern, " ".join(toks), re.IGNORECASE):
+                return "ask", reason
+    return None, None
+
+
 def main():
     try:
         cmd = json.load(sys.stdin).get("tool_input", {}).get("command", "")
     except Exception:
         return
-    segs = list(segments(cmd))
-    for toks in segs:
-        reason = deny_reason(toks)
-        if reason:
-            decide("deny", reason)
-    for toks in segs:
-        # a word in a commit message or a search is not an action
-        if toks[0].rsplit("/", 1)[-1] in ("git", "echo", "printf", "grep", "rg"):
-            continue
-        for pattern, reason in ASK:
-            if re.search(pattern, " ".join(toks), re.IGNORECASE):
-                decide("ask", reason)
+    kind, reason = check(cmd)
+    if kind:
+        decide(kind, reason)
 
 
 if __name__ == "__main__":
