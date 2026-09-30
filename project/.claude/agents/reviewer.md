@@ -18,6 +18,15 @@ no stake in it passing.
   fails the review if it isn't.
 - Be specific: file:line, what's wrong, why it matters. No style nitpicks.
 
+## UI changes
+
+If the diff touches user-facing UI and `harness/DESIGN.md` has a direction,
+also check against it: colours, fonts, radii come from its tokens (no one-off
+values), the layout follows the mockup the item says it implements, text
+contrast ≥ 4.5:1, touch targets ≥ 44 px (48 dp on Android), reduced motion
+respected, the sizes it lists handled. A screen that departs from its mockup is
+blocking; a hard-coded value that should be a token is a `debt` finding.
+
 ## Blocking vs. findings
 
 - **Blocking** → `VERDICT: FAIL`. The criterion isn't met, a regression, a

@@ -71,6 +71,7 @@ my-project/
 │   ├── agents/reviewer.md     ← read-only reviewer (the checker) → findings to the backlog
 │   ├── agents/strategist.md   ← read-only strategist: overview, brainstorm, new items
 │   ├── skills/ship/           ← the outer loop, in the chat ("ship the next one")
+│   ├── skills/design/         ← visual direction before the first screen (UI projects)
 │   └── skills/harness-init/   ← the interview
 └── .agents/skills/        ← project skills, any agent (linked into .claude/skills/ for Claude Code)
 ```
@@ -89,6 +90,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `EVAL.md` | Instruments + blind scoring + score history |
 | `PLAN.md` | Active plan (separate from execution) |
 | `DECISIONS.md` | Decision log (ADR-lite), in-repo |
+| `DESIGN.md` | Visual direction and the values to build UI with (brief, tokens, components, layout per size); `no UI` for a CLI or an API |
 
 ### How we work — `harness/guide/` (changes rarely)
 
@@ -130,11 +132,14 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `reviewer` agent | PASS/FAIL against the acceptance criterion; non-blocking `FINDING:` lines become `bug` / `debt` items | no — read-only |
 | `strategist` agent | Overview, questions, brainstorm; proposes new items tied to the goal, flags items to cut | no — read-only |
 | `harness-init` skill | The interview (init, or re-run to change goal / stack / features) | harness files only |
+| `design` skill | UI projects, before the first screen: a design interview (audience, feel, references — inspiration or copy? —, platforms and sizes, copy language), 2–3 mockup directions, iterations, then `DESIGN.md` | mockups and harness files only |
 
 Why only two agents: an agent earns its place when it changes the **tools**
 (read-only), the **context** (fresh, no author bias) or the **model**. A
 "planner" or "UI expert" persona is just a prompt — that knowledge goes in a
-skill or in `AGENTS.md`. Both agents are pinned to the strongest model
+skill or in `AGENTS.md`. That's why design is a skill: it has to ask the user
+questions and show mockups in the chat, which a subagent can't; the design
+check at build time is a section of the `reviewer`. Both agents are pinned to the strongest model
 (`model: opus`): see *Model routing* in `harness/GOAL.md`.
 
 ## The two loops

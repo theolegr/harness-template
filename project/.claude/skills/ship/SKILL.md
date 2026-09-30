@@ -36,6 +36,11 @@ of `DECISIONS.md`, the files you'll touch).
 Check `harness/guide/SKILLS.md`: if this item needs a skill that isn't
 installed, suggest it now (at most 2, with the reason).
 
+The item touches user-facing UI → read `harness/DESIGN.md` and build from its
+values and mockups. Its status is still "no direction yet" → stop and propose
+the `design` skill first (or add a design item): UI built without a direction
+gets redone. The design item itself is run by the `design` skill, not here.
+
 Write the plan to `harness/PLAN.md` — real paths, real symbols, definition of
 done = the acceptance criterion. Show the user a short version (5–10 lines:
 what changes where, how it's tested, what's out of scope) and **wait for their

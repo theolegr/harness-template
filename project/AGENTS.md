@@ -102,6 +102,8 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 | Overview, brainstorm, new ideas (read-only) | `.claude/agents/strategist.md` |
 | Finished / cut features | `harness/FEATURES-DONE.json` (read only when you need history) |
 | The goal + metric + /goal contract | `harness/GOAL.md` |
+| Visual direction, design values (read before any UI work) | `harness/DESIGN.md` |
+| Set the visual direction, first mockups | `.claude/skills/design/SKILL.md` (`/design`) |
 | Quality bar / instruments | `harness/EVAL.md` |
 | Test conventions | `harness/guide/TESTING.md` |
 | Decisions log | `harness/DECISIONS.md` |

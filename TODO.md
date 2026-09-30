@@ -23,6 +23,12 @@ tick it off, then update the *Status* note in the README.
       back on a red check.
 - [ ] A project skill created in `.agents/skills/` is linked and usable as
       `/<name>` in the next session.
+- [ ] `/design` on a project with screens: the interview asks "inspiration or
+      copy?" for each reference; 2–3 directions land on a canvas; a crossed-out
+      element is removed and the mark cleaned up; `DESIGN.md` gets exact values;
+      `/ship` of the next UI item reads it and the reviewer checks against it.
+      (First run in a real project, 2026-09 — the skill is distilled
+      from it, not yet run as written.)
 - [ ] `loop.sh once` with the real `claude -p` commands from `AGENTS.md` §3:
       plan, build, review, state update — and a forced failure (blocked item,
       row in `STATE.md` Blockers, attempt kept on its branch).

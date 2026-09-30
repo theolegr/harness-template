@@ -39,6 +39,8 @@
    of done. Then execute.
    Before planning, glance at `harness/guide/SKILLS.md`: if this feature needs a skill
    that isn't installed (a test tool, a stack, security…), suggest it with the reason.
+   A feature with user-facing UI: read `harness/DESIGN.md` first (no direction yet →
+   the `design` skill comes before the code).
 
 ## Anti-patterns (do not do these)
 

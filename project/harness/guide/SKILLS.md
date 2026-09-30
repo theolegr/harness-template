@@ -74,7 +74,7 @@ Not in the list? `npx skills find <query>` searches the open directory
 | Skill | Repo | Suggest when | Install |
 |---|---|---|---|
 | Superpowers: brainstorming, test-driven-development, systematic debugging, code review | [obra/superpowers](https://github.com/obra/superpowers) | A feature needs TDD discipline, or the agent keeps failing at debugging. **Overlap**: its planning/execution skills (writing-plans, subagent-driven-development) duplicate `PLAN.md` and `loop.sh`. Use the techniques; plans still go to `harness/PLAN.md` | `/plugin install superpowers@claude-plugins-official` |
-| frontend-design | [anthropics/skills](https://github.com/anthropics/skills) (example-skills) | Feature with user-facing UI where look and feel matter | same as webapp-testing |
+| frontend-design | [anthropics/skills](https://github.com/anthropics/skills) (example-skills) | Feature with user-facing UI where look and feel matter. Complements the harness's `design` skill: `design` sets the direction and `DESIGN.md`, this one helps build screens that match it | same as webapp-testing |
 
 ### Domain
 

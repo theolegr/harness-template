@@ -18,7 +18,7 @@
 #   1. Copies project/ from the template into the target:
 #        AGENTS.md, CLAUDE.md                → project root (what agents read first)
 #        harness/…                           → goal, state, features, guide, scripts
-#        .claude/skills/                     → harness-init (interview), ship (loop in the chat)
+#        .claude/skills/                     → harness-init (interview), ship (loop in the chat), design (visual direction)
 #        .claude/settings.json, agents/      → hooks (guard, stop-check) + reviewer, strategist
 #        .agents/skills/                     → project skills folder
 #   2. Keeps the template itself in harness/template/ (git-ignored).

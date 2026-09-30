@@ -73,6 +73,27 @@ It shows you a summary and **asks before committing**.
 **Check these two yourself before saying yes:** the goal (`harness/GOAL.md`)
 and the backlog. Everything else follows from them.
 
+### A product with screens? The look comes before the code
+
+TableDispo has screens, so the interview puts a design item first:
+`F-005 p0 Visual direction and first mockups`. When it's that item's turn,
+say **"/design"** (or "let's do the mockups"):
+
+1. **A short design interview** — who books (a diner, on a phone, often
+   outside the restaurant), the first screen and its one action ("pick a time"),
+   3 words for the feel and 3 to avoid, 1–3 references with *what you take from
+   each* (inspiration, not a copy), platforms and sizes (web 1440 + 390; the
+   skill knows iOS, Android, desktop and email sizes too), the language of the copy.
+2. **2–3 directions** of that screen, side by side on a Claude Design canvas
+   (or HTML files in `design/`). You pick one, or mix.
+3. **Iterations**: you answer in words or by drawing on the mockup — cross out
+   what goes, circle what stays. Choices you can't make yet (palette, dark or
+   light) become switches on the mockup instead of more rounds.
+4. **Recorded**: exact values in `harness/DESIGN.md`, the why in
+   `harness/DECISIONS.md`, open choices in `harness/STATE.md`. From then on,
+   every UI item is planned from `DESIGN.md`, and the reviewer checks screens
+   against it.
+
 ## 3. Everyday work: "ship the next one"
 
 Open Claude Code in the project and say:
@@ -174,4 +195,5 @@ with one item at a time, and review the branch before merging.
 | *status* | goal, backlog, git state |
 | *add a feature: …* / *cut F-004* | backlog changes |
 | *overview* / *brainstorm …* | the strategist |
+| `/design` | visual direction and first mockups, before building screens |
 | `/harness-init` | change goal, stack, features |

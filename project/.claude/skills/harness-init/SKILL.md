@@ -74,11 +74,19 @@ No suggestion is the normal case. Install nothing during the interview.
 - Propose 3–5 features derived from the goal, each with a priority (p0–p3) and
   a testable acceptance criterion. Show them as a short list; let the user
   edit, add, remove, reorder. Features must be small enough for one session each.
+- The product has a user-facing UI (website, web or mobile app, desktop, email)?
+  Put a p0 design item **before** the first UI feature: "Visual direction and
+  first mockups" — acceptance: "The user picks one direction among 2–3 mockups
+  of <first screen>; it is mocked at <main size> and <smallest size>; its
+  values are in harness/DESIGN.md and the choice in harness/DECISIONS.md."
+  The `design` skill runs it. UI features' notes say "implements the validated
+  mockup, no improvised design".
 
 **Round 5 — How the agents work** (offer the defaults, most users accept them)
 - Autonomy: keep the defaults of `harness/guide/SOUL.md` (code/tests/docs free;
   deploy, publish, spend money, destroy data need approval)? Anything to add?
-- Public voice, if the product has user-facing copy (tone in one line).
+- Public voice, if the product has user-facing copy (tone in one line, and the
+  language(s) of the copy).
 - Day to day the user drives from this chat with the `ship` skill ("ship the
   next one"): nothing to configure. Only for unattended runs (`loop.sh`, cron):
   keep the default commands already in `AGENTS.md` §3, or change them.
@@ -100,6 +108,7 @@ No suggestion is the normal case. Install nothing during the interview.
 | Phase, health 🟢, "Working on" = first p0 feature, "Next" = the next ones, today's date | `harness/STATE.md` |
 | Skipped answers | `harness/STATE.md` → Open questions |
 | Autonomy / voice changes | `harness/guide/SOUL.md` |
+| No user-facing UI (CLI, API, bot) | `harness/DESIGN.md` → Status `no UI`; otherwise leave it for the `design` skill |
 | Loop commands | `AGENTS.md` §3 (the `loop.sh` line) |
 | Stack choice | `harness/DECISIONS.md` → the "Initial stack choice" entry, dated today |
 | Accepted / declined skills | `harness/DECISIONS.md` → one entry "Initial skills": which, why, which were declined |
