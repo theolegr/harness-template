@@ -27,31 +27,23 @@ echo
 echo "── BACKLOG ──"
 if [ -f $H/FEATURES.json ]; then
   python3 - <<'PY'
-import json, collections, os
-d = json.load(open("harness/FEATURES.json"))
-fs = d.get("features", [])
-arch = json.load(open("harness/FEATURES-DONE.json")).get("features", []) if os.path.exists("harness/FEATURES-DONE.json") else []
-c = collections.Counter(f.get("status", "?") for f in fs + arch)
-total = len(fs) + len(arch)
-done = c.get("done", 0)
-stale = [f["id"] for f in fs if f.get("status") in ("done", "cut")]
-if stale:
-    print(f"  ⚠ still in FEATURES.json: {', '.join(stale)} — archive with ./harness/scripts/feature.sh <id> done")
-pct = (done / total * 100) if total else 0
-print(f"  {done}/{total} done ({pct:.0f}%)  {dict(c)}")
-kinds = collections.Counter(f.get("type", "feature") for f in fs)
-if fs:
-    print("  open: " + ", ".join(f"{n} {k}" for k, n in sorted(kinds.items())))
-cur = [f for f in fs if f.get("status") == "in_progress"]
-if cur:
-    for f in cur:
-        print(f"  ▶ in progress: {f['id']} {f['name']}")
-nxt = [f for f in fs if f.get("status") == "todo"]
-nxt.sort(key=lambda f: str(f.get("priority", "p9")))
-if nxt:
-    print(f"  → next: {nxt[0]['id']} {nxt[0]['name']}  (say \"ship the next one\" / /ship)")
-blocked = [f for f in fs if f.get("status") == "blocked"]
-for f in blocked:
+import sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, "harness/scripts")
+from state import backlog   # same reading as the dashboard
+b = backlog()
+for w in b["warnings"]:
+    print(f"  ⚠ {w}")
+if b["stale"]:
+    print(f"  ⚠ still in FEATURES.json: {', '.join(b['stale'])} — archive with ./harness/scripts/feature.sh <id> done")
+print(f"  {b['done']}/{b['total']} done ({b['percent']}%)  {b['counts']}")
+if b["open_types"]:
+    print("  open: " + ", ".join(f"{n} {k}" for k, n in sorted(b["open_types"].items())))
+for f in b["in_progress"]:
+    print(f"  ▶ in progress: {f['id']} {f['name']}")
+if b["todo"]:
+    print(f"  → next: {b['todo'][0]['id']} {b['todo'][0]['name']}  (say \"ship the next one\" / /ship)")
+for f in b["blocked"]:
     print(f"  ⛔ blocked: {f['id']} {f['name']}")
 PY
 else
@@ -84,4 +76,5 @@ for f in AGENTS.md CLAUDE.md $H/GOAL.md $H/STATE.md $H/FEATURES.json $H/EVAL.md 
 done
 
 echo
+echo "  dashboard: ./harness/scripts/dashboard.py --open   ·   as JSON: ./harness/scripts/state.py"
 echo "═══════════════════════════════════════════════"

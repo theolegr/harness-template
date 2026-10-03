@@ -163,7 +163,7 @@ questions only you can answer. Nothing is added until you say which ones you wan
 | add an idea | *"add a feature: owner can block a slot for a private event"* — it gets a testable criterion and a priority |
 | drop something | *"cut F-004, not needed for the MVP"* |
 | change the goal or the stack | `/harness-init` — it re-runs only the rounds you want to change |
-| see where things stand | *"status"* |
+| see where things stand | *"status"* — or *"open the dashboard"*: the same state as a page in your browser |
 | deploy | *"deploy to Vercel"* — it will always ask you first |
 
 When you correct the agent, it turns the correction into a principle in the
@@ -180,6 +180,9 @@ with one item at a time, and review the branch before merging.
 
 ## 8. Your weekly five minutes
 
+Open the dashboard (`./harness/scripts/dashboard.py --open`, or ask for it):
+backlog, milestones, the metric's trend, blockers and decisions on one page.
+
 - Did the metric in `harness/GOAL.md` move? Two sessions without progress →
   say *"we're stalling"*: the agent will propose a different approach.
 - Skim `harness/DECISIONS.md`: do you still agree?
@@ -193,6 +196,7 @@ with one item at a time, and review the branch before merging.
 | *ship F-003* / *fix B-001* | that item |
 | *ship until the MVP* | several in a row, stops on questions and failures |
 | *status* | goal, backlog, git state |
+| *open the dashboard* | the same state as a page: `./harness/scripts/dashboard.py --open` |
 | *add a feature: …* / *cut F-004* | backlog changes |
 | *overview* / *brainstorm …* | the strategist |
 | `/design` | visual direction and first mockups, before building screens |

@@ -112,3 +112,4 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 | Memory + learning from corrections | `harness/guide/MEMORY.md` |
 | External skills to suggest | `harness/guide/SKILLS.md` |
 | Health check (exit code = verdict) | `harness/scripts/harness-check.sh` |
+| Project state as JSON / as a page for the user | `harness/scripts/state.py` / `harness/scripts/dashboard.py --open` |

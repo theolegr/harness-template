@@ -55,6 +55,24 @@ and fills everything in. It shows the result and commits only with your OK.
 - Non-destructive — existing files are never touched; if the harness version
   differs, it is written next to yours as `<file>.harness-new` for review.
 
+### Update a project already set up
+
+New version of the template, project already filled in — bring it up to date
+without losing anything:
+
+```bash
+git -C ~/harness-template pull
+~/harness-template/init-harness.sh --update my-project
+```
+
+`harness/template/` (the copy installed last time) tells your edits from the
+template's. A file you never edited is replaced; a file the template didn't
+change stays yours; when both changed it, the two are merged (3-way) if the
+edits don't overlap, else yours is kept and the new version written next to it
+as `<file>.harness-new`. A file you deleted is not re-added; new files are
+added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, …) is never
+overwritten. No interview, no commit — review with `git diff`, then commit.
+
 ## What you get
 
 ```
@@ -64,7 +82,7 @@ my-project/
 ├── harness/               ← committed: this project's harness
 │   ├── GOAL.md  STATE.md  FEATURES.json  PLAN.md  EVAL.md  DECISIONS.md
 │   ├── guide/             ← how we work (changes rarely)
-│   ├── scripts/           ← status, check, loop
+│   ├── scripts/           ← status, dashboard, check, loop
 │   └── template/          ← git-ignored copy of this template
 ├── .claude/
 │   ├── settings.json          ← hooks: boot state, Bash guard, stop-on-red-check
@@ -108,6 +126,8 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | File | Role |
 |---|---|
 | `harness-status.sh` | **Show** state, don't describe it |
+| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): backlog board, milestones, metric and score trend, health, blockers, decisions, commits. `--open`, `--watch`. A view — writes nothing else |
+| `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
 | `loop.sh` | Outer loop engine with enforced maker/checker split |
 | `link-skills.sh` | Links each `.agents/skills/<name>` into `.claude/skills/` (the only place Claude Code loads skills from); run at session start |

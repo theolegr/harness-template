@@ -10,7 +10,7 @@ test, which will show what the agent actually uses.
 
 | ID | Idea | Size | Status |
 |---|---|---|---|
-| I-01 | Project dashboard | M | open |
+| I-01 | Project dashboard | M | decided — A, done |
 | I-02 | Safe git when several sessions share a checkout | S | open |
 | I-03 | Git `pre-commit` hook running `harness-check.sh` | S | open |
 | I-04 | Enforce protected paths (blind eval, `harness/template/`) | S | open |
@@ -31,28 +31,7 @@ Sources: own ideas, and a comparison with [pi](https://github.com/earendil-works
 
 ## I-01 — Project dashboard
 
-**Why.** `harness-status.sh` prints the state in a terminal. A page would show it
-at a glance and let you share it: goal and metric trend, backlog by status,
-milestone progress, health, last check, recent commits.
-
-**Options**
-- **A. Static HTML, generated.** A `harness/scripts/state.py --json` parses
-  `FEATURES.json`, `FEATURES-DONE.json`, `STATE.md`, the score history in
-  `EVAL.md`, `git log` and `.check.ok` into one JSON; `harness-status.sh` and a
-  `dashboard.sh` (→ git-ignored `harness/dashboard.html`) both read it. Stdlib
-  only, works with any agent. Read-only: it shows state, never writes it.
-  *Leaning.*
-- **B. claude.ai artifact.** Live, shareable, nicer — but Claude-only and
-  outside the repo.
-- **C. Terminal UI** (or `watch harness-status.sh`). No browser, but more code
-  to maintain for little more than today.
-- **D. Nothing.** `harness-status.sh` is enough.
-
-**Open**
-- `STATE.md` *Health* / *Phase* are free text. Freeze the `**Health**: 🟢` line
-  format, or move the *Now* fields to JSON?
-- Which panels earn their place? Decide from what the real-world test actually
-  fills in — a dashboard over empty fields is noise.
+Decided — see *Decided* at the bottom.
 
 ## I-02 — Safe git when several sessions share a checkout
 
@@ -249,3 +228,20 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### I-01 — Project dashboard · 2026-10-03
+
+Chose **A, static HTML generated from one JSON view**: works with any agent,
+no dependency, no server, and the files stay the only source. Rejected: a
+claude.ai artifact (Claude-only, outside the repo), a terminal UI (more code
+for little more than `harness-status.sh`).
+
+- `harness/scripts/state.py` reads the harness files + git into one JSON;
+  `harness-status.sh` (backlog) and `dashboard.py` both use it.
+- `harness/scripts/dashboard.py [--open] [--watch N]` writes
+  `harness/dashboard.html` (git-ignored).
+- `STATE.md` stays Markdown: the `- **Health**: 🟢 …` line format is what's
+  parsed; choice lists like `a | b | c` count as not filled in.
+- Cut items no longer count in the backlog total (they're neither done nor left).
+- Comes with `init-harness.sh --update`, so projects already set up get it
+  without losing their data.

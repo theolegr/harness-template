@@ -13,6 +13,8 @@
 #   --name "My Project"   pre-fill the project name (the interview asks otherwise)
 #   --type saas|web|api|bot|cli
 #   --no-interview        only copy the files; run /harness-init in Claude later
+#   --update              bring an installed project up to this template version
+#                         (no interview, your data is never overwritten — see below)
 #
 # What it does:
 #   1. Copies project/ from the template into the target:
@@ -27,16 +29,28 @@
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
 # version differs, it is written next to it as <file>.harness-new for review.
+#
+# --update (run the NEW template on the project:
+#   git -C ~/harness-template pull && ~/harness-template/init-harness.sh --update my-project)
+# compares each file with harness/template/ — the version installed last time:
+#   you never edited it            → replaced by the new version
+#   the template didn't change it  → yours, untouched
+#   both changed it                → 3-way merge when the edits don't overlap,
+#                                    else kept + <file>.harness-new to merge by hand
+#   you deleted it                 → not re-added
+#   new in the template            → added
+# then refreshes harness/template/. Nothing is committed: review with git diff.
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")" && pwd)"
-TARGET="" NAME="" TYPE="" INTERVIEW=1
+TARGET="" NAME="" TYPE="" INTERVIEW=1 UPDATE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --name) NAME="${2:?--name needs a value}"; shift 2;;
     --type) TYPE="${2:?--type needs a value}"; shift 2;;
     --no-interview) INTERVIEW=0; shift;;
-    -h|--help) sed -n '2,28s/^# \{0,1\}//p' "$0"; exit 0;;
+    --update) UPDATE=1; INTERVIEW=0; shift;;
+    -h|--help) sed -n '2,43s/^# \{0,1\}//p' "$0"; exit 0;;
     -*) echo "unknown option: $1" >&2; exit 2;;
     *) TARGET="$1"; shift;;
   esac
@@ -46,7 +60,7 @@ done
 if [ -z "$TARGET" ]; then
   case "$SRC" in
     */harness/template) TARGET="$(dirname "$(dirname "$SRC")")";;
-    *) echo "usage: init-harness.sh <target-dir> [--name ...] [--type ...] [--no-interview]" >&2
+    *) echo "usage: init-harness.sh <target-dir> [--name ...] [--type ...] [--no-interview | --update]" >&2
        echo "       (or copy the template to <project>/harness/template and run it from there)" >&2
        exit 2;;
   esac
@@ -59,34 +73,78 @@ case "$TARGET/" in
 esac
 cd "$TARGET"
 
-echo "── Installing project harness in $TARGET"
+# --update: the copy installed last time (harness/template/) is the merge base
+BASE=""
+if [ "$UPDATE" -eq 1 ]; then
+  if [ "$SRC" = "$TARGET/harness/template" ]; then
+    echo "✗ --update needs the NEW template — run it from your template clone, not from harness/template/:" >&2
+    echo "    git -C ~/harness-template pull && ~/harness-template/init-harness.sh --update $TARGET" >&2
+    exit 1
+  fi
+  if [ -d harness/template/project ]; then
+    BASE="harness/template/project"
+  else
+    echo "  ⚠ no harness/template/ — can't tell your edits from the template's: every file that"
+    echo "    differs is kept, with the new version next to it as <file>.harness-new"
+  fi
+fi
 
-# 1. Copy project/ into the target, never overwriting
-ADDED=()
+# 3-way merge of the template's changes (base → new) into your file. Fails —
+# leaving your file untouched — on overlapping edits or a merge that isn't valid JSON.
+merge3() {
+  local out; out="$(mktemp)"
+  if git merge-file -p "$1" "$2" "$3" > "$out" 2>/dev/null \
+     && { case "$1" in *.json) python3 -m json.tool "$out" >/dev/null 2>&1;; esac; }; then
+    cat "$out" > "$1"; rm -f "$out"; return 0
+  fi
+  rm -f "$out"; return 1
+}
+
+echo "── $([ "$UPDATE" -eq 1 ] && echo Updating || echo Installing) project harness in $TARGET"
+
+# 1. Copy project/ into the target, never overwriting your edits
+ADDED=() REVIEW=()
 while IFS= read -r f; do
-  mkdir -p "$(dirname "$f")"
+  new="$SRC/project/$f" base=""
+  [ -n "$BASE" ] && [ -f "$BASE/$f" ] && base="$BASE/$f"
   if [ ! -e "$f" ]; then
-    cp "$SRC/project/$f" "$f"
+    if [ -n "$base" ]; then
+      echo "  - $f (you deleted it — not re-added)"
+      continue
+    fi
+    mkdir -p "$(dirname "$f")"
+    cp "$new" "$f"
     ADDED+=("$f")
     echo "  + $f"
-  elif cmp -s "$SRC/project/$f" "$f"; then
+  elif cmp -s "$new" "$f"; then
     echo "  · $f (already up to date)"
+  elif [ -n "$base" ] && cmp -s "$base" "$f"; then
+    cp "$new" "$f"
+    echo "  ↑ $f (updated — you hadn't edited it)"
+  elif [ -n "$base" ] && cmp -s "$base" "$new"; then
+    echo "  · $f (yours — unchanged in the template)"
+  elif [ -n "$base" ] && merge3 "$f" "$base" "$new"; then
+    echo "  ⇄ $f (merged: your edits + the template's)"
   else
-    cp "$SRC/project/$f" "$f.harness-new"
+    cp "$new" "$f.harness-new"
+    REVIEW+=("$f")
     echo "  ~ $f kept — harness version written to $f.harness-new"
   fi
-done < <(cd "$SRC/project" && find . -type f ! -name '.DS_Store' | sed 's|^\./||' | sort)
-chmod +x harness/scripts/*.sh
+done < <(cd "$SRC/project" && find . -type f ! -name '.DS_Store' ! -path '*/__pycache__/*' | sed 's|^\./||' | sort)
+chmod +x harness/scripts/*.sh harness/scripts/*.py
 mkdir -p tests
 if [ -f CLAUDE.md ] && ! grep -q '@AGENTS.md' CLAUDE.md; then
   echo "  ⚠ your CLAUDE.md doesn't import AGENTS.md — add a line '@AGENTS.md' to it"
   echo "    (the interview will offer to do it)"
 fi
 
-# 2. Keep a copy of the template (for re-runs and updates), unless we run from it
-if [ "$SRC" != "$TARGET/harness/template" ] && [ ! -e harness/template ]; then
-  mkdir -p harness/template
-  (cd "$SRC" && tar --exclude .git --exclude .DS_Store -cf - .) | (cd harness/template && tar -xf -)
+# 2. Keep a copy of the template (for re-runs, and the base of the next --update),
+#    unless we run from it
+if [ "$SRC" != "$TARGET/harness/template" ] && { [ ! -e harness/template ] || [ "$UPDATE" -eq 1 ]; }; then
+  rm -rf harness/template.tmp && mkdir -p harness/template.tmp
+  (cd "$SRC" && tar --exclude .git --exclude .DS_Store --exclude __pycache__ -cf - .) \
+    | (cd harness/template.tmp && tar -xf -)
+  rm -rf harness/template && mv harness/template.tmp harness/template
   echo "  + harness/template/ (copy of the template, git-ignored)"
 fi
 
@@ -112,7 +170,8 @@ fi
 
 # 3. .gitignore — the template copy and the loop's runtime files never go in git
 touch .gitignore
-for pat in harness/template/ harness/.loop.log harness/.loop.stop harness/.check.ok '*.harness-new'; do
+for pat in harness/template/ harness/.loop.log harness/.loop.stop harness/.check.ok harness/dashboard.html \
+           '*.harness-new'; do
   grep -qxF "$pat" .gitignore || echo "$pat" >> .gitignore
 done
 echo "  + .gitignore entries"
@@ -129,6 +188,17 @@ if [ ! -d .git ]; then
   echo "  + git repository initialised (first commit made)"
 else
   echo "  · git repo already present — not committing (review with git status)"
+fi
+
+if [ "$UPDATE" -eq 1 ]; then
+  echo
+  echo "── Updated. Nothing committed — review with: git status && git diff"
+  if [ "${#REVIEW[@]}" -gt 0 ]; then
+    echo "   To merge by hand (you and the template changed the same lines):"
+    for f in "${REVIEW[@]}"; do echo "     $f  ←  $f.harness-new"; done
+    echo "   Then delete the .harness-new files."
+  fi
+  exit 0
 fi
 
 # 4. Interview

@@ -5,6 +5,8 @@
       "Bash(./harness/scripts/harness-status.sh)",
       "Bash(./harness/scripts/feature.sh *)",
       "Bash(./harness/scripts/link-skills.sh)",
+      "Bash(./harness/scripts/state.py)",
+      "Bash(./harness/scripts/dashboard.py *)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
