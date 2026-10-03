@@ -42,3 +42,4 @@ tick it off, then update the *Status* note in the README.
 
 - Adjust the skills and agents to what was actually observed.
 - Measure before changing models (see *Model routing* in `project/harness/GOAL.md`).
+- Go through [IDEAS.md](IDEAS.md): the improvement backlog, decisions still open.
