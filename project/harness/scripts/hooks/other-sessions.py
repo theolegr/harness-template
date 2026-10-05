@@ -7,8 +7,10 @@ says: another session active here and you'll change files → your own worktree.
 
 "Active" = another Claude Code transcript of this project written to in the
 last 15 minutes, whose latest working directory is this same checkout (a
-session that moved into a worktree doesn't count). Silent when there's none;
-never fails the session start.
+session that moved into a worktree doesn't count). Not counted either: the
+conversation a /clear just closed, and the earlier steps of the same loop.sh
+run (it exports HARNESS_LOOP). Silent when there's none; never fails the
+session start.
 """
 import json
 import os
@@ -52,6 +54,8 @@ def main():
         data = json.load(sys.stdin)
     except ValueError:
         return
+    if os.environ.get("HARNESS_LOOP"):
+        return   # a step of loop.sh: the steps before it are the same run, not another session
     transcript, me = data.get("transcript_path"), data.get("session_id")
     here = toplevel(data.get("cwd") or os.getcwd())
     if not transcript or not here:
@@ -66,14 +70,17 @@ def main():
             continue
         if age <= WINDOW and toplevel(last_cwd(p)) == here:
             ages.append(age)
+    if data.get("source") == "clear" and ages:
+        ages.remove(min(ages))   # /clear: the newest one is the conversation just cleared
     if not ages:
         return
     n, last = len(ages), int(min(ages) // 60)
     repo = os.path.basename(here)
-    print(f"⚠ OTHER SESSIONS — {n} other agent session{'s' if n > 1 else ''} active in this folder "
-          f"(last write {last} min ago).\n"
+    print(f"⚠ OTHER SESSIONS — {n} other agent session{'s' if n > 1 else ''} wrote from this folder "
+          f"in the last {WINDOW // 60} min (latest {last} min ago).\n"
           f"  Before changing files, work in your own worktree (AGENTS.md §5):\n"
-          f"    git worktree add ../{repo}-<topic> -b <branch>   then, in Claude Code, EnterWorktree with that path")
+          f"    git worktree add ../{repo}-<topic> -b <branch>   then, in Claude Code, EnterWorktree with that path\n"
+          f"  If the user says that session is closed, stay here.")
 
 
 if __name__ == "__main__":

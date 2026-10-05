@@ -69,6 +69,8 @@ f["status"] = status
 def add_note(text):   # notes are appended, never replaced: they hold decisions and context
     f["notes"] = f"{f['notes']} — {text}" if f.get("notes") else text
 if status == "blocked":
+    if note and f.get("blocked") and f["blocked"] != note:
+        add_note(f"was blocked ({today}): {f['blocked']}")   # a new reason doesn't erase the old one
     if note:
         f["blocked"] = note
 elif "blocked" in f:
