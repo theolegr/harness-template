@@ -132,7 +132,12 @@ while IFS= read -r f; do
   fi
 done < <(cd "$SRC/project" && find . -type f ! -name '.DS_Store' ! -path '*/__pycache__/*' | sed 's|^\./||' | sort)
 chmod +x harness/scripts/*.sh harness/scripts/*.py
-mkdir -p tests
+# tests/ only for a new project with no stack yet (a monorepo keeps its tests in its packages)
+MANIFEST=0
+for m in package.json pyproject.toml requirements.txt go.mod Cargo.toml Gemfile pom.xml build.gradle composer.json; do
+  if [ -f "$m" ]; then MANIFEST=1; fi
+done
+if [ "$UPDATE" -eq 0 ] && [ "$MANIFEST" -eq 0 ]; then mkdir -p tests; fi
 if [ -f CLAUDE.md ] && ! grep -q '@AGENTS.md' CLAUDE.md; then
   echo "  ⚠ your CLAUDE.md doesn't import AGENTS.md — add a line '@AGENTS.md' to it"
   echo "    (the interview will offer to do it)"
@@ -144,6 +149,15 @@ if [ "$SRC" != "$TARGET/harness/template" ] && { [ ! -e harness/template ] || [ 
   rm -rf harness/template.tmp && mkdir -p harness/template.tmp
   (cd "$SRC" && tar --exclude .git --exclude .DS_Store --exclude __pycache__ -cf - .) \
     | (cd harness/template.tmp && tar -xf -)
+  # a file you added there (notes…) isn't the template's: keep it, but say where it belongs
+  if [ -d harness/template ]; then
+    while IFS= read -r f; do
+      if [ ! -e "harness/template.tmp/$f" ]; then
+        mkdir -p "harness/template.tmp/$(dirname "$f")" && cp -p "harness/template/$f" "harness/template.tmp/$f"
+        echo "  · kept harness/template/$f — not part of the template; harness notes belong in harness/TEMPLATE-FEEDBACK.md"
+      fi
+    done < <(cd harness/template && find . -type f ! -name .DS_Store | sed 's|^\./||')
+  fi
   rm -rf harness/template && mv harness/template.tmp harness/template
   echo "  + harness/template/ (copy of the template, git-ignored)"
 fi
@@ -196,7 +210,7 @@ if [ "$UPDATE" -eq 1 ]; then
   if [ "${#REVIEW[@]}" -gt 0 ]; then
     echo "   To merge by hand (you and the template changed the same lines):"
     for f in "${REVIEW[@]}"; do echo "     $f  ←  $f.harness-new"; done
-    echo "   Then delete the .harness-new files."
+    echo "   Then delete the .harness-new files (harness-status.sh reminds you until they're gone)."
   fi
   exit 0
 fi

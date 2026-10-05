@@ -72,6 +72,13 @@ edits don't overlap, else yours is kept and the new version written next to it
 as `<file>.harness-new`. A file you deleted is not re-added; new files are
 added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, …) is never
 overwritten. No interview, no commit — review with `git diff`, then commit.
+`harness-status.sh` lists the `.harness-new` files until you've merged and
+deleted them.
+
+`harness/template/` is replaced on each update: don't keep notes there (a file
+you added is kept, with a warning). A bug or a gap in the harness itself goes in
+`harness/TEMPLATE-FEEDBACK.md` in your project — tracked by git — then upstream
+as an issue or a PR.
 
 ## What you get
 

@@ -20,7 +20,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 H = ROOT / "harness"
-PLACEHOLDER = re.compile(r"<[A-Za-z][^>]*>")
+TOKEN = re.compile(r"<([A-Za-z][^>]*)>")
+FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|"[\w-]+":\s*)?')
 RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harness/dashboard.html")
 REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/FEATURES.json",
             "harness/EVAL.md", "harness/PLAN.md", "harness/DECISIONS.md", "harness/guide/BOOT.md"]
@@ -36,10 +37,23 @@ def read(rel):
         return ""
 
 
+def placeholder(text):
+    """True when text still holds a template placeholder: a <…> with a space in it
+    (<the target, in one sentence>, <e.g. Python>), or one standing alone as the whole
+    value — a line, a list item, a table cell, a JSON string, what follows **Label**:
+    (<command>, <url>, "<criteria>"). A <…> in a command, a path or `code`
+    (sites:new <client>, feature.sh <id> <status>) is an argument, not a placeholder;
+    nor is an HTML tag with attributes."""
+    text = re.sub(r"`[^`]*`", "", text)
+    if any(" " in m.group(1) and '="' not in m.group(1) for m in TOKEN.finditer(text)):
+        return True
+    return any(TOKEN.fullmatch(FIELD.sub("", cell).strip().strip('",[]').strip()) for cell in text.split("|"))
+
+
 def filled(v):
     """The value, or None when it's empty, a placeholder or a template choice list."""
     v = (v or "").strip()
-    if not v or PLACEHOLDER.search(v) or " | " in v or v in ("—", "-"):
+    if not v or placeholder(v) or " | " in v or v in ("—", "-"):
         return None
     return v
 
@@ -212,16 +226,32 @@ def checks():
     return {"last_pass": when, "loop_log": log[-15:], "loop_stopped": (H / ".loop.stop").exists()}
 
 
+def update_warnings():
+    """<file>.harness-new left by init-harness.sh --update (you and the template changed the same lines)."""
+    where = [(".", "*"), (".claude", "*"), ("harness", "**/*"), (".claude/agents", "**/*"),
+             (".claude/skills", "**/*"), (".agents", "**/*")]   # not .claude/worktrees/
+    pending = sorted(str(p.relative_to(ROOT)) for d, pat in where for p in (ROOT / d).glob(pat + ".harness-new")
+                     if "template" not in p.relative_to(ROOT).parts)
+    return [f"template update not merged: {', '.join(pending)} — merge what you need into the file "
+            f"next to it, then delete the .harness-new"] if pending else []
+
+
+def placeholder_lines():
+    """Lines of the files the interview fills in that still hold a placeholder."""
+    return sum(placeholder(l) for f in ("AGENTS.md", "harness/GOAL.md", "harness/FEATURES.json")
+               for l in read(f).splitlines())
+
+
 def collect():
     b = backlog()
     warnings = list(b.pop("warnings"))
-    ph = sum(len(PLACEHOLDER.findall(l)) > 0
-             for f in ("AGENTS.md", "harness/GOAL.md", "harness/FEATURES.json") for l in read(f).splitlines())
+    ph = placeholder_lines()
     if ph:
         warnings.append(f"{ph} lines still have <placeholders> — run /harness-init in Claude Code")
     if b["stale"]:
         warnings.append(f"still in FEATURES.json: {', '.join(b['stale'])} — archive with "
                         f"./harness/scripts/feature.sh <id> done")
+    warnings += update_warnings()
     missing = [f for f in REQUIRED if not (ROOT / f).exists()]
     if missing:
         warnings.append("missing: " + ", ".join(missing))

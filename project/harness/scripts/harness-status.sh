@@ -18,7 +18,8 @@ else
   echo "  ⚠ $H/GOAL.md missing"
 fi
 # placeholders still unfilled → the interview hasn't been run (or was skipped)
-PH=$(cat AGENTS.md $H/GOAL.md $H/FEATURES.json 2>/dev/null | grep -cE '<[A-Za-z][^>]*>' || true)
+PH=$(python3 -c 'import sys; sys.dont_write_bytecode = True; sys.path.insert(0, "harness/scripts")
+from state import placeholder_lines; print(placeholder_lines())' 2>/dev/null || echo 0)
 if [ "${PH:-0}" -gt 0 ]; then
   echo "  ⚠ $PH lines still have <placeholders> — run /harness-init in Claude Code"
 fi
@@ -30,9 +31,9 @@ if [ -f $H/FEATURES.json ]; then
 import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, "harness/scripts")
-from state import backlog   # same reading as the dashboard
+from state import backlog, update_warnings   # same reading as the dashboard
 b = backlog()
-for w in b["warnings"]:
+for w in b["warnings"] + update_warnings():
     print(f"  ⚠ {w}")
 if b["stale"]:
     print(f"  ⚠ still in FEATURES.json: {', '.join(b['stale'])} — archive with ./harness/scripts/feature.sh <id> done")
