@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 H = ROOT / "harness"
 TOKEN = re.compile(r"<([A-Za-z][^>]*)>")
 CODE = re.compile(r"`([^`]*)`")
+AUTOLINK = re.compile(r"<[^<>\s]*(?:://|@)[^<>\s]*>")
 # what may precede a value: a list marker, ❌, a label (**Repo**:, Did:, "name":)
 FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|[A-Za-z][\w ]{0,30}:\s+|"[\w-]+":\s*)?')
 RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harness/dashboard.html")
@@ -47,10 +48,11 @@ def placeholder(text):
       <F-XXX> — <what>, Did: <what>;
     - `code` holding only a <…>: `<cmd>`.
     A <…> inside a command or a path (sites:new <client>, feature.sh <id> <status>,
-    `../<repo>-<topic>`) is an argument, not a placeholder; nor is an HTML tag with attributes."""
+    `../<repo>-<topic>`) is an argument, not a placeholder; nor is an HTML tag with attributes,
+    nor a Markdown autolink or email (<https://…>, <name@example.com>)."""
     if any(TOKEN.fullmatch(c.strip()) for c in CODE.findall(text)):
         return True
-    text = CODE.sub("", text)
+    text = AUTOLINK.sub("", CODE.sub("", text))
     if any(" " in m.group(1) and '="' not in m.group(1) for m in TOKEN.finditer(text)):
         return True
     for cell in text.split("|"):
