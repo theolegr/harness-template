@@ -8,18 +8,24 @@
 #   (cached in harness/.check.ok) — chatting doesn't re-run the tests.
 # - Blocks at most once in a row (stop_hook_active): if the agent still can't
 #   fix it, it stops and says so instead of looping forever.
+# - Checks the session's own checkout: the worktree it moved into, if any
+#   (AGENTS.md §5), not the main folder another session may be changing.
 # - Off switch: HARNESS_STOP_CHECK=0.
 set -uo pipefail
 
-cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../../..}"
 [ "${HARNESS_STOP_CHECK:-1}" = "0" ] && exit 0
-git rev-parse --git-dir >/dev/null 2>&1 || exit 0
-
 INPUT="$(cat)"
-ACTIVE="$(printf '%s' "$INPUT" | python3 -c 'import json,sys
-try: print(str(json.load(sys.stdin).get("stop_hook_active", False)).lower())
-except Exception: print("false")')"
-[ "$ACTIVE" = "true" ] && exit 0
+field() { printf '%s' "$INPUT" | python3 -c 'import json,sys
+try: v = json.load(sys.stdin).get(sys.argv[1])
+except Exception: v = None
+print("" if v is None else str(v).lower() if isinstance(v, bool) else v)' "$1"; }
+[ "$(field stop_hook_active)" = "true" ] && exit 0
+
+CWD="$(field cwd)"
+ROOT="$([ -n "$CWD" ] && git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)"
+cd "${ROOT:-${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../../..}}" || exit 0
+git rev-parse --git-dir >/dev/null 2>&1 || exit 0
+[ -x harness/scripts/harness-check.sh ] || exit 0   # a folder without the harness: nothing to check
 
 # Fingerprint of the working tree, ignoring the harness runtime files.
 IGNORE=(':!harness/.loop.log' ':!harness/.loop.stop' ':!harness/.check.ok')

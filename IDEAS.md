@@ -11,7 +11,7 @@ test, which will show what the agent actually uses.
 | ID | Idea | Size | Status |
 |---|---|---|---|
 | I-01 | Project dashboard | M | decided — A, done |
-| I-02 | Safe git when several sessions share a checkout | S | open |
+| I-02 | Safe git when several sessions share a checkout | S | decided — worktree when another session is active, done |
 | I-03 | Git `pre-commit` hook running `harness-check.sh` | S | open |
 | I-04 | Enforce protected paths (blind eval, `harness/template/`) | S | open |
 | I-05 | Reviewer: don't trust the maker's claims | XS | open |
@@ -35,24 +35,7 @@ Decided — see *Decided* at the bottom.
 
 ## I-02 — Safe git when several sessions share a checkout
 
-**Why.** Two agents in the same directory: `git add -A` commits the other
-session's half-done work. [BOOT.md:59](project/harness/guide/BOOT.md#L59) and
-[loop.sh:63](project/harness/scripts/loop.sh#L63) use it, and
-[guard-bash.py](project/harness/scripts/hooks/guard-bash.py) doesn't stop
-`git stash`, `git add -A` / `.` or `git commit --no-verify`. pi's `AGENTS.md`:
-"only commit files YOU changed, stage explicit paths".
-
-**Options**
-- **A. Rule + guard.** Rule in `AGENTS.md` §5; guard denies `stash`,
-  `add -A`/`.`, `--no-verify`. *Leaning.*
-- **B. Rule only.** Prose, no enforcement.
-- **C. Worktrees only.** Parallel work always in its own worktree
-  (`LOOP.md` already says so); keep `add -A`.
-
-**Open**
-- `loop.sh` works on its own branch — is `add -A` there acceptable, or does it
-  also need explicit paths?
-- Is denying `git stash` too strict for a solo, single-session user?
+Decided — see *Decided* at the bottom.
 
 ## I-03 — Git `pre-commit` hook running `harness-check.sh`
 
@@ -228,6 +211,27 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### I-02 — Safe git when several sessions share a checkout · 2026-10-05
+
+**Evidence (a real project, 2026-10-02 → 05).** The user routinely ran 3 to 5 chat
+sessions in the same folder. One session's `git checkout` moved the others to
+its branch; commits had to be sorted file by file so as not to ship another
+session's half-done work; two checks running at once overwrote each other's
+build output.
+
+Chose **C (worktrees), only when another session is active, with detection**
+instead of a guard: the `SessionStart` hook `hooks/other-sessions.py` warns
+when another Claude Code transcript of the project was written in the last 15
+minutes from the same checkout; the session that arrives second moves to its
+own worktree (`AGENTS.md` §5, rule 9; `EnterWorktree` in Claude Code). The
+`Stop` hook checks the session's own checkout, not the main folder.
+`harness-status.sh` lists the other worktrees. In a shared folder the rule says:
+no branch switch, no `git stash`, stage explicit paths. Rejected: **A** (a guard
+on `git add -A` / `stash` is a nuisance for the common single-session case),
+**C always** (a worktree and a dependency install for every session, at no
+gain when alone). Limits: two sessions started the same minute may not see each
+other; fixed test ports stay shared between worktrees.
 
 ### I-01 — Project dashboard · 2026-10-03
 

@@ -80,6 +80,8 @@ Where the mockups live, in this order:
 
 Real content, no lorem ipsum; missing facts become placeholders like `[PRICE]`.
 Give the user the link and one line per direction. Let them pick, mix or reject.
+A new canvas gets its line in `harness/ARTIFACTS.md` right away (link, what,
+status), so the next session can find it.
 
 ## 3. Iterate on the chosen one
 

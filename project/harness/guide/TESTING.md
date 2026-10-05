@@ -41,5 +41,13 @@ For anything risky (payments, auth, data migrations), don't just test — attack
 2. Agent B: try to disprove each finding.
 3. Human/referee: decide.
 
+**Input a stranger controls** (a form field, an email, a URL, a file, a prompt) is risky too, and the
+attack starts at the plan: list the cases in the definition of done, each with its test — links and
+addresses, IPs, look-alike and invisible Unicode characters, oversize input, injection. Prefer an
+**allowlist** (what a valid value looks like) to a blocklist (what a bad one looks like): a blocklist
+loses to the next disguise. On a real project, a name field echoed in an email took 4 reviews because
+it started as a blocklist — beaten by an IP, then a full-width dot, then a zero-width space — before
+an allowlist passed.
+
 Catches the sycophancy problem where an agent "finds" bugs that don't exist, or
 misses real ones to please.

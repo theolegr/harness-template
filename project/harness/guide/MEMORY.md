@@ -13,7 +13,23 @@
 | Current state | `harness/STATE.md` | overwritten constantly |
 | What's left (features, bugs, debt) | `harness/FEATURES.json` | until done → `FEATURES-DONE.json` |
 | Hard-won procedures | `.agents/skills/` | maintained, pruned |
+| Links to pages published outside the repo (canvases, diagrams) | `harness/ARTIFACTS.md` | a line per page, marked archived when stale |
 | The target | `harness/GOAL.md` | reviewed weekly |
+
+## The agent's own memory vs. the repo
+
+Some agents keep a memory of their own (Claude Code's auto-memory, in
+`~/.claude/projects/<project>/memory/`). It lives on one machine, for one
+agent: the reviewer, a `loop.sh` run on another machine, Codex or a
+teammate never see it. So:
+
+- **Agent memory** — only facts about the person: how they write (dictation,
+  language), how they like to be answered, what they don't want running on
+  their machine.
+- **The repo** — every rule about the project: naming, process, testing,
+  design choices and rejected directions. When a correction is a project rule,
+  write it where the work happens (`AGENTS.md` §5, a guide, `DESIGN.md`),
+  commit it, and don't keep a copy in agent memory — two copies drift apart.
 
 ## Rules
 

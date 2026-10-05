@@ -116,6 +116,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `PLAN.md` | Active plan (separate from execution) |
 | `DECISIONS.md` | Decision log (ADR-lite), in-repo |
 | `DESIGN.md` | Visual direction and the values to build UI with (brief, tokens, components, layout per size); `no UI` for a CLI or an API |
+| `ARTIFACTS.md` | Links to the pages published outside the repo (design canvases, diagrams, shared mockups), current or archived |
 
 ### How we work — `harness/guide/` (changes rarely)
 
@@ -133,13 +134,14 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | File | Role |
 |---|---|
 | `harness-status.sh` | **Show** state, don't describe it |
-| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): backlog board, milestones, metric and score trend, health, blockers, decisions, commits. `--open`, `--watch`. A view — writes nothing else |
+| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): what waits on you first (blocked items with their reason, open questions), then progress, next item, milestones, the backlog as one ordered list (details fold out), metric and score trend, decisions, commits. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
 | `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
 | `loop.sh` | Outer loop engine with enforced maker/checker split |
 | `link-skills.sh` | Links each `.agents/skills/<name>` into `.claude/skills/` (the only place Claude Code loads skills from); run at session start |
-| `feature.sh` | `add` a feature / bug / debt item; change a status — `done` / `cut` archives it to `FEATURES-DONE.json` |
-| `hooks/stop-check.sh` | Stop hook: the agent can't end a turn on a red `harness-check` |
+| `feature.sh` | `add` a feature / bug / debt item; change a status — `done` / `cut` archives it to `FEATURES-DONE.json`; `blocked "<reason>"` keeps the reason apart; notes are appended, never replaced |
+| `hooks/other-sessions.py` | SessionStart hook: warns when another agent session is active in the same folder (→ work in a worktree) |
+| `hooks/stop-check.sh` | Stop hook: the agent can't end a turn on a red `harness-check` (checks the session's own worktree) |
 | `hooks/guard-bash.py` | PreToolUse hook: refuses force-push / `rm -rf` / `reset --hard`, asks before migrations & deploys |
 
 ## The 5 principles, mechanically enforced
@@ -186,14 +188,16 @@ corrections and patches the process itself.
 ## Hooks — the rules the agent can't skip (Claude Code)
 
 A hook is a script Claude Code runs by itself at a given moment. The agent
-doesn't choose to run it, so it can't forget or bypass it. Three are wired in
+doesn't choose to run it, so it can't forget or bypass it. These are wired in
 `.claude/settings.json`:
 
 | When | Script | Effect |
 |---|---|---|
 | Session start | `link-skills.sh`, `harness-status.sh` | Project skills are linked for Claude Code; goal, current feature and git state are injected into the agent's context (the BOOT happens by itself) |
+| Session start | `hooks/other-sessions.py` | Another session wrote from this folder in the last 15 min → a warning: the late one works in its own worktree (`AGENTS.md` §5) |
 | Before each Bash command | `hooks/guard-bash.py` | **Refuses** force-push, `reset --hard`, `clean -f`, `branch -D`, `rm -rf` (except build/cache dirs); **asks** before migrations, `DROP`/`TRUNCATE`, deploys |
-| When the agent wants to stop | `hooks/stop-check.sh` | Runs `harness-check.sh` if files changed; if red, the agent gets the error and must keep working (blocks once in a row at most) |
+| When the agent wants to stop | `hooks/stop-check.sh` | Runs `harness-check.sh` in the session's checkout if files changed; if red, the agent gets the error and must keep working (blocks once in a row at most) |
+| When the agent wants to stop | `dashboard.py` | Rewrites `harness/dashboard.html` if you've generated it once (never blocks) |
 
 - **Adapt the guard**: edit `SAFE_RM` and `ASK` at the top of `guard-bash.py`.
   In a non-interactive run (`claude -p`, `loop.sh`), "ask" means refused — on purpose.

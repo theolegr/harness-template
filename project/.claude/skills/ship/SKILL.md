@@ -20,10 +20,14 @@ and the result, not a narration.
 - The user named one (`ship F-003`, `fix B-002`) → that one.
 - Otherwise the next one, like `loop.sh`: `in_progress` first, then by
   priority (`p0` before `p1`). `./harness/scripts/harness-status.sh` shows it.
+  `blocked` items wait on the user (their reason says what for): skip them.
 - Backlog empty → say so and offer the `strategist` agent to propose what's next.
 - `./harness/scripts/harness-check.sh` already red before you start → fixing
   that is the item. Never build on a broken base.
-- Uncommitted changes unrelated to the item → ask before going on.
+- The status warns `⚠ OTHER SESSIONS`, or there are uncommitted changes you
+  didn't make → another session is working here: don't touch, stash or commit
+  its files; build in your own worktree (`AGENTS.md` §5). Unsure whose they
+  are → ask.
 
 Then `./harness/scripts/feature.sh <id> in_progress`.
 
@@ -40,6 +44,12 @@ The item touches user-facing UI → read `harness/DESIGN.md` and build from its
 values and mockups. Its status is still "no direction yet" → stop and propose
 the `design` skill first (or add a design item): UI built without a direction
 gets redone. The design item itself is run by the `design` skill, not here.
+
+The item handles input a stranger controls (a form field, an email, a URL, an
+uploaded file, a prompt) → plan the attacks now, not after the review: list the
+cases in the definition of done (links and addresses, look-alike and invisible
+characters, oversize input, injection…) and prefer an allowlist to a blocklist
+(`harness/guide/TESTING.md` → Adversarial verification).
 
 Write the plan to `harness/PLAN.md` — real paths, real symbols, definition of
 done = the acceptance criterion. Show the user a short version (5–10 lines:
@@ -68,6 +78,9 @@ the facts:
 
 > Review the changes since commit `<sha>` (uncommitted ones included) for
 > `<id>`: `<name>`. Acceptance criterion: `<acceptance>`.
+
+Add the attack cases from the plan when there are some (they're part of the
+definition of done, not your opinion).
 
 Don't tell it what you think of your own code, and don't pre-empt its findings.
 
@@ -99,6 +112,10 @@ Read the answer: the `VERDICT:` line, the blocking problems, the `FINDING:` line
 
 A few lines: what shipped, the verdict (and fix rounds, if any), the new
 backlog items, the metric, the next item. Then ask: "Ship the next one?"
+
+A question you asked that the user hasn't answered yet, or an item that now
+waits on them, is written down before you end the turn: `feature.sh <id>
+blocked "<what it waits on>"`, or `harness/STATE.md` → Open questions.
 
 Don't chain to the next item on your own — unless the user asked for several
 ("ship 3", "ship until the MVP"). Even then, stop at the first FAIL you can't

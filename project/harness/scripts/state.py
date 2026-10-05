@@ -162,20 +162,23 @@ def backlog():
         if f.get("status") not in ("done", "cut"):
             open_types[f.get("type", "feature")] = open_types.get(f.get("type", "feature"), 0) + 1
 
-    status_of = {f.get("id"): f.get("status") for f in everything}
+    by_id = {f.get("id"): f for f in everything}
     milestones = []
     for m in active.get("milestones", []):
-        ids = [i for i in m.get("features", []) if status_of.get(i) and status_of[i] != "cut"]
+        ids = [i for i in m.get("features", []) if i in by_id and by_id[i].get("status") != "cut"]
         milestones.append({"name": m.get("name"), "definition_of_done": filled(m.get("definition_of_done")),
-                           "done": sum(status_of[i] == "done" for i in ids), "total": len(ids)})
+                           "done": sum(by_id[i].get("status") == "done" for i in ids), "total": len(ids),
+                           "items": [{"id": i, "name": by_id[i].get("name"), "status": by_id[i].get("status")}
+                                     for i in ids]})
 
-    closed = sorted((f for f in archive if f.get("status") == "done"),
+    # newest first; the archive is in closing order, so reversing it first breaks same-day ties
+    closed = sorted((f for f in reversed(archive) if f.get("status") == "done"),
                     key=lambda f: str(f.get("closed", "")), reverse=True)
     return {"project": filled(active.get("project")), "updated": filled(active.get("updated")),
             "done": done, "total": total, "percent": round(done / total * 100) if total else 0,
             "counts": counts, "open_types": open_types,
             "in_progress": pick("in_progress"), "todo": pick("todo"), "blocked": pick("blocked"),
-            "recently_closed": closed[:8], "milestones": milestones,
+            "recently_closed": closed[:8], "shipped": closed, "milestones": milestones,
             "stale": [f["id"] for f in items if f.get("status") in ("done", "cut")],
             "template_items": len(items) - len(real), "warnings": warnings}
 
@@ -186,9 +189,10 @@ def evals():
     for r in rows:
         if not filled(r[0]):
             continue
-        m = re.search(r"-?\d+(?:\.\d+)?", r[2] if len(r) > 2 else "")
+        # a plain number (95, 0.87, 92 %) can be charted; "M1 3/6" can't
+        m = re.fullmatch(r"\s*(-?\d+(?:\.\d+)?)\s*%?\s*", r[2] if len(r) > 2 else "")
         history.append({"date": r[0], "commit": r[1] if len(r) > 1 else "",
-                        "score": r[2] if len(r) > 2 else "", "value": float(m.group()) if m else None,
+                        "score": r[2] if len(r) > 2 else "", "value": float(m.group(1)) if m else None,
                         "notes": r[3] if len(r) > 3 else ""})
     return {"history": history}
 

@@ -38,6 +38,12 @@
 # loop/<id>-failed-<timestamp>.
 set -uo pipefail
 
+# macOS: no idle sleep while the loop runs (closing the lid on battery still sleeps)
+if [ -z "${HARNESS_AWAKE:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export HARNESS_AWAKE=1
+  exec caffeinate -i "$0" "$@"
+fi
+
 cd "$(dirname "$0")/../.."   # project root
 
 MAX_ITER="${MAX_ITER:-5}"
