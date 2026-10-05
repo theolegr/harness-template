@@ -21,7 +21,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 H = ROOT / "harness"
 TOKEN = re.compile(r"<([A-Za-z][^>]*)>")
-FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|"[\w-]+":\s*)?')
+CODE = re.compile(r"`([^`]*)`")
+# what may precede a value: a list marker, ❌, a label (**Repo**:, Did:, "name":)
+FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|[A-Za-z][\w ]{0,30}:\s+|"[\w-]+":\s*)?')
 RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harness/dashboard.html")
 REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/FEATURES.json",
             "harness/EVAL.md", "harness/PLAN.md", "harness/DECISIONS.md", "harness/guide/BOOT.md"]
@@ -38,16 +40,24 @@ def read(rel):
 
 
 def placeholder(text):
-    """True when text still holds a template placeholder: a <…> with a space in it
-    (<the target, in one sentence>, <e.g. Python>), or one standing alone as the whole
-    value — a line, a list item, a table cell, a JSON string, what follows **Label**:
-    (<command>, <url>, "<criteria>"). A <…> in a command, a path or `code`
-    (sites:new <client>, feature.sh <id> <status>) is an argument, not a placeholder;
-    nor is an HTML tag with attributes."""
-    text = re.sub(r"`[^`]*`", "", text)
+    """True when text still holds a template placeholder:
+    - a <…> with a space in it: <the target, in one sentence>, <e.g. Python>;
+    - a value made of nothing but <…> and punctuation — a line, a list item, a table
+      cell, a JSON string, what follows a label: <command>, **Repo**: <url>, "<criteria>",
+      <F-XXX> — <what>, Did: <what>;
+    - `code` holding only a <…>: `<cmd>`.
+    A <…> inside a command or a path (sites:new <client>, feature.sh <id> <status>,
+    `../<repo>-<topic>`) is an argument, not a placeholder; nor is an HTML tag with attributes."""
+    if any(TOKEN.fullmatch(c.strip()) for c in CODE.findall(text)):
+        return True
+    text = CODE.sub("", text)
     if any(" " in m.group(1) and '="' not in m.group(1) for m in TOKEN.finditer(text)):
         return True
-    return any(TOKEN.fullmatch(FIELD.sub("", cell).strip().strip('",[]').strip()) for cell in text.split("|"))
+    for cell in text.split("|"):
+        v = FIELD.sub("", cell)
+        if TOKEN.search(v) and not re.search(r"\w", TOKEN.sub("", v)):
+            return True
+    return False
 
 
 def filled(v):
@@ -228,10 +238,10 @@ def checks():
 
 def update_warnings():
     """<file>.harness-new left by init-harness.sh --update (you and the template changed the same lines)."""
-    where = [(".", "*"), (".claude", "*"), ("harness", "**/*"), (".claude/agents", "**/*"),
-             (".claude/skills", "**/*"), (".agents", "**/*")]   # not .claude/worktrees/
-    pending = sorted(str(p.relative_to(ROOT)) for d, pat in where for p in (ROOT / d).glob(pat + ".harness-new")
-                     if "template" not in p.relative_to(ROOT).parts)
+    # where the template writes — never harness/template/ or .claude/worktrees/
+    where = [(".", "*"), (".claude", "*"), ("harness", "*"), ("harness/guide", "**/*"), ("harness/scripts", "**/*"),
+             (".claude/agents", "**/*"), (".claude/skills", "**/*"), (".agents", "**/*")]
+    pending = sorted(str(p.relative_to(ROOT)) for d, pat in where for p in (ROOT / d).glob(pat + ".harness-new"))
     return [f"template update not merged: {', '.join(pending)} — merge what you need into the file "
             f"next to it, then delete the .harness-new"] if pending else []
 

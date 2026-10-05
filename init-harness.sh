@@ -149,14 +149,21 @@ if [ "$SRC" != "$TARGET/harness/template" ] && { [ ! -e harness/template ] || [ 
   rm -rf harness/template.tmp && mkdir -p harness/template.tmp
   (cd "$SRC" && tar --exclude .git --exclude .DS_Store --exclude __pycache__ -cf - .) \
     | (cd harness/template.tmp && tar -xf -)
-  # a file you added there (notes…) isn't the template's: keep it, but say where it belongs
+  # the template's own files, listed — the next update tells them from the ones you add
+  (cd harness/template.tmp && find . -type f ! -name .harness-files | sed 's|^\./||' | sort) \
+    > harness/template.tmp/.harness-files
+  # a file you added there (notes…) isn't the template's: keep it, but say where it belongs.
+  # Without the list (installed by an older version), anything the new template lacks counts as yours.
   if [ -d harness/template ]; then
     while IFS= read -r f; do
-      if [ ! -e "harness/template.tmp/$f" ]; then
-        mkdir -p "harness/template.tmp/$(dirname "$f")" && cp -p "harness/template/$f" "harness/template.tmp/$f"
-        echo "  · kept harness/template/$f — not part of the template; harness notes belong in harness/TEMPLATE-FEEDBACK.md"
+      [ -e "harness/template.tmp/$f" ] && continue
+      if [ -f harness/template/.harness-files ] && grep -qxF "$f" harness/template/.harness-files; then
+        continue   # the template's, dropped upstream
       fi
-    done < <(cd harness/template && find . -type f ! -name .DS_Store | sed 's|^\./||')
+      mkdir -p "harness/template.tmp/$(dirname "$f")" && cp -p "harness/template/$f" "harness/template.tmp/$f"
+      echo "  · kept harness/template/$f — not part of the template; harness notes belong in harness/TEMPLATE-FEEDBACK.md"
+    done < <(cd harness/template && find . -type f ! -name .DS_Store ! -name .harness-files ! -path './.git/*' \
+               | sed 's|^\./||')
   fi
   rm -rf harness/template && mv harness/template.tmp harness/template
   echo "  + harness/template/ (copy of the template, git-ignored)"
