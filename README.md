@@ -140,7 +140,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `loop.sh` | Outer loop engine with enforced maker/checker split |
 | `link-skills.sh` | Links each `.agents/skills/<name>` into `.claude/skills/` (the only place Claude Code loads skills from); run at session start |
 | `feature.sh` | `add` a feature / bug / debt item; change a status — `done` / `cut` archives it to `FEATURES-DONE.json`; `blocked "<reason>"` keeps the reason apart; notes are appended, never replaced |
-| `hooks/other-sessions.py` | SessionStart hook: warns when another agent session is active in the same folder (→ work in a worktree) |
+| `hooks/other-sessions.py` | SessionStart hook: warns when another agent session is active in the same folder (→ work in a worktree); SessionEnd (`end`): records the session as ended |
 | `hooks/stop-check.sh` | Stop hook: the agent can't end a turn on a red `harness-check` (checks the session's own worktree) |
 | `hooks/guard-bash.py` | PreToolUse hook: refuses force-push / `rm -rf` / `reset --hard`, asks before migrations & deploys |
 
@@ -194,7 +194,8 @@ doesn't choose to run it, so it can't forget or bypass it. These are wired in
 | When | Script | Effect |
 |---|---|---|
 | Session start | `link-skills.sh`, `harness-status.sh` | Project skills are linked for Claude Code; goal, current feature and git state are injected into the agent's context (the BOOT happens by itself) |
-| Session start | `hooks/other-sessions.py` | Another session wrote from this folder in the last 15 min → a warning: the late one works in its own worktree (`AGENTS.md` §5) |
+| Session start | `hooks/other-sessions.py` | Another session wrote from this folder in the last 15 min and hasn't ended → a warning: the late one works in its own worktree (`AGENTS.md` §5) |
+| Session end | `hooks/other-sessions.py end` | Records the session as ended (`harness/.sessions-ended`, git-ignored), so the next one doesn't take it for parallel work |
 | Before each Bash command | `hooks/guard-bash.py` | **Refuses** force-push, `reset --hard`, `clean -f`, `branch -D`, `rm -rf` (except build/cache dirs); **asks** before migrations, `DROP`/`TRUNCATE`, deploys |
 | When the agent wants to stop | `hooks/stop-check.sh` | Runs `harness-check.sh` in the session's checkout if files changed; if red, the agent gets the error and must keep working (blocks once in a row at most) |
 | When the agent wants to stop | `dashboard.py` | Rewrites `harness/dashboard.html` if you've generated it once (never blocks) |

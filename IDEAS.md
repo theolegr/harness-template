@@ -230,8 +230,9 @@ own worktree (`AGENTS.md` §5, rule 9; `EnterWorktree` in Claude Code). The
 no branch switch, no `git stash`, stage explicit paths. Rejected: **A** (a guard
 on `git add -A` / `stash` is a nuisance for the common single-session case),
 **C always** (a worktree and a dependency install for every session, at no
-gain when alone). Not counted as another session: the steps of one `loop.sh`
-run (it exports `HARNESS_LOOP`) and the conversation a `/clear` just closed.
+gain when alone). Not counted as another session: one that ended (exit or
+`/clear`, recorded by a `SessionEnd` hook in `harness/.sessions-ended`) and the
+steps of one `loop.sh` run (it exports `HARNESS_LOOP`).
 Limits: two sessions started the same minute may not see each
 other; fixed test ports stay shared between worktrees.
 

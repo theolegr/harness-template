@@ -192,7 +192,7 @@ fi
 # 3. .gitignore — the template copy and the loop's runtime files never go in git
 touch .gitignore
 for pat in harness/template/ harness/.loop.log harness/.loop.stop harness/.check.ok harness/dashboard.html \
-           '*.harness-new'; do
+           harness/.sessions-ended '*.harness-new'; do
   grep -qxF "$pat" .gitignore || echo "$pat" >> .gitignore
 done
 echo "  + .gitignore entries"
