@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Ship the next backlog item (feature, bug or tech debt from harness/FEATURES.json) inside this chat — pick it, plan it (the user validates), build it, have the independent reviewer subagent verify it, record it. Use when the user says "ship", "ship the next one", "next feature", "on attaque la suivante", "ship F-003", "fix B-002", or asks to work through the backlog.
+description: Ship the next backlog item (feature, bug or tech debt from harness/FEATURES.json) inside this chat — pick it, plan it (the user validates), build it, have the independent reviewer subagent verify it, record it. Use when the user says, in any language, "ship", "ship the next one", "next feature", "let's do the next one", "ship F-003", "fix B-002", or asks to work through the backlog.
 ---
 
 # ship — the outer loop, in the chat

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Shell syntax
+        run: |
+          for f in init-harness.sh tests/*.sh project/harness/scripts/*.sh project/harness/scripts/hooks/*.sh; do
+            bash -n "$f"
+          done
+
+      - name: Python syntax
+        # ast.parse, not py_compile: no __pycache__ left in project/ for the install to copy
+        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' project/harness/scripts/*.py project/harness/scripts/hooks/*.py tests/*.py
+
+      - name: Guard tests
+        run: python3 tests/test_guard_bash.py
+
+      - name: Install + update on a throwaway project
+        run: bash tests/smoke-install.sh

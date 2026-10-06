@@ -21,10 +21,28 @@ example, driven from a chat with Claude Code.
 > and strategist subagents — hasn't been run on a real project yet. What's
 > left to validate is in [TODO.md](TODO.md). Issues and feedback welcome.
 
+## How it works
+
+1. **Install** — `init-harness.sh my-project` copies the harness into a new or
+   existing project, then Claude interviews you (~10 min) and fills in the
+   goal, the stack and its commands, the first features and the autonomy rules.
+2. **Work** — every session starts from the real state (a hook shows goal,
+   current item, git state). In the chat, `/ship` takes one backlog item at a
+   time: plan → your OK → build → a read-only `reviewer` subagent checks it →
+   the item is recorded and committed. A `strategist` subagent helps decide what
+   comes next. Unattended, `loop.sh` runs the same loop.
+3. **Guard rails** — Claude Code hooks refuse destructive commands, ask before
+   migrations and deploys, and keep the agent working while the checks are red.
+4. **Update** — `init-harness.sh --update my-project` brings in a new version
+   of the template: files you never edited are replaced, edits on both sides are
+   merged (3-way), and your project data is never touched.
+
 ## Why
 
-> Agent = Model + Harness. Same model, better harness → 52.8% → 66.5% on
-> TerminalBench. **The harness is the product.**
+> Agent = Model + Harness. Same model, better harness: LangChain took their
+> coding agent from 52.8% to 66.5% on Terminal Bench 2.0 by changing only the
+> harness ([source](https://www.langchain.com/blog/improving-deep-agents-with-harness-engineering)).
+> **The harness is the product.**
 
 Projects fail with agents not because the model is weak but because there's no
 environment: no stated goal, no state, no boot sequence, no verification, no
@@ -43,6 +61,8 @@ into `my-project/harness/template/` (git-ignored, without the template's own `.g
 The init copies the files (below), then **starts Claude, which interviews you**
 (~10 min: project, stack + commands, goal + metric, first features, autonomy)
 and fills everything in. It shows the result and commits only with your OK.
+(In a folder that isn't a git repo yet, the install itself makes a first commit
+of the harness files, before the interview.)
 
 - Options: `--name "My Project"`, `--type saas|web|app|api|bot|cli` (free text, e.g. `"mobile app"`), `--no-interview`.
 - Or copy the template into the project first and run it from there:
@@ -203,6 +223,10 @@ doesn't choose to run it, so it can't forget or bypass it. These are wired in
 | When the agent wants to stop | `hooks/stop-check.sh` | Runs `harness-check.sh` in the session's checkout if files changed; if red, the agent gets the error and must keep working (blocks once in a row at most) |
 | When the agent wants to stop | `dashboard.py` | Rewrites `harness/dashboard.html` if you've generated it once (never blocks) |
 
+- **The guard is a safety net, not a sandbox.** It matches command patterns, so
+  it catches an agent's mistakes, not every way to do damage: a script, or
+  `find … -delete`, can still remove files (known gaps: [IDEAS.md](IDEAS.md)
+  I-16). For unattended runs, use a sandbox (I-10).
 - **Adapt the guard**: edit `SAFE_RM` and `ASK` at the top of `guard-bash.py`.
   In a non-interactive run (`claude -p`, `loop.sh`), "ask" means refused — on purpose.
 - **Turn off**: the Stop check with `HARNESS_STOP_CHECK=0`; any hook with `/hooks`
@@ -218,6 +242,15 @@ Every file here encodes an assumption about what the model *can't* do. As models
 improve, those assumptions expire. **Test by turning components off.** If quality
 doesn't change, delete the component. A harness that only ever grows becomes
 overhead. See `EVAL.md` → "future-proofing test".
+
+## Tests (this repo)
+
+```bash
+python3 tests/test_guard_bash.py   # the Bash guard: what it refuses, asks, lets through
+bash tests/smoke-install.sh        # install on a throwaway project, run its scripts, --update it
+```
+
+No dependencies beyond `git`, `bash` and `python3`. CI runs both on Linux and macOS.
 
 ## Credits
 

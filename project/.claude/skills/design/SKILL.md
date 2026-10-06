@@ -1,6 +1,6 @@
 ---
 name: design
-description: Set the visual direction of a product with UI (website, web app, iOS, Android, desktop, email) before the first screen is built — a short design interview, 2–3 contrasting mockup directions, iterations on the chosen one, then the values written into harness/DESIGN.md. Use when the user says "design", "/design", "maquette", "mockup", "direction visuelle", "the look", when the next backlog item is the design item, or when a UI item is about to be planned while harness/DESIGN.md has no direction.
+description: Set the visual direction of a product with UI (website, web app, iOS, Android, desktop, email) before the first screen is built — a short design interview, 2–3 contrasting mockup directions, iterations on the chosen one, then the values written into harness/DESIGN.md. Use when the user says, in any language, "design", "/design", "mockup", "visual direction", "the look", when the next backlog item is the design item, or when a UI item is about to be planned while harness/DESIGN.md has no direction.
 ---
 
 # design — from a brief to a validated mockup
