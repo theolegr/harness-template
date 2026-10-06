@@ -49,14 +49,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/scripts/hooks/stop-check.sh\"",
-            "timeout": 600,
-            "statusMessage": "harness-check…"
+            "command": "[ -f \"$CLAUDE_PROJECT_DIR/harness/dashboard.html\" ] && python3 \"$CLAUDE_PROJECT_DIR/harness/scripts/dashboard.py\" >/dev/null 2>&1; exit 0",
+            "timeout": 30
           },
           {
             "type": "command",
-            "command": "[ -f \"$CLAUDE_PROJECT_DIR/harness/dashboard.html\" ] && python3 \"$CLAUDE_PROJECT_DIR/harness/scripts/dashboard.py\" >/dev/null 2>&1; exit 0",
-            "timeout": 30
+            "command": "bash \"$CLAUDE_PROJECT_DIR/harness/scripts/hooks/stop-check.sh\"",
+            "timeout": 600,
+            "statusMessage": "harness-check…"
           }
         ]
       }

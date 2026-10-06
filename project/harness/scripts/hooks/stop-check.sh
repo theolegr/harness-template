@@ -25,7 +25,7 @@ CWD="$(field cwd)"
 ROOT="$([ -n "$CWD" ] && git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)"
 cd "${ROOT:-${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../../..}}" || exit 0
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0
-[ -x harness/scripts/harness-check.sh ] || exit 0   # a folder without the harness: nothing to check
+[ -f harness/scripts/harness-check.sh ] || exit 0   # a folder without the harness: nothing to check
 
 # Fingerprint of the working tree, ignoring the harness runtime files.
 IGNORE=(':!harness/.loop.log' ':!harness/.loop.stop' ':!harness/.check.ok')
@@ -36,7 +36,7 @@ FP="$({ printf '%s\n' "$STATUS"; git diff HEAD -- . "${IGNORE[@]}" 2>/dev/null
       } | git hash-object --stdin)"
 [ "$(cat harness/.check.ok 2>/dev/null)" = "$FP" ] && exit 0
 
-if OUT="$(./harness/scripts/harness-check.sh 2>&1)"; then
+if OUT="$(bash harness/scripts/harness-check.sh 2>&1)"; then   # bash: a lost execute bit mustn't skip the check
   printf '%s\n' "$FP" > harness/.check.ok
   exit 0
 fi

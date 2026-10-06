@@ -72,7 +72,7 @@ change stays yours; when both changed it, the two are merged (3-way) if the
 edits don't overlap, else yours is kept and the new version written next to it
 as `<file>.harness-new`. A file you deleted is not re-added; new files are
 added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, `EVAL.md`, `PLAN.md`,
-`DECISIONS.md`, `DESIGN.md`) is never touched — no merge, no `.harness-new`; the
+`DECISIONS.md`, `DESIGN.md`, `ARTIFACTS.md`) is never touched — no merge, no `.harness-new`; the
 update only says when the template's version of one changed (the new one is in
 `harness/template/project/`). No interview, no commit — review with `git diff`, then commit.
 `harness-status.sh` lists the `.harness-new` files until you've merged and
