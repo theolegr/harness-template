@@ -11,7 +11,7 @@
 #
 # Options:
 #   --name "My Project"   pre-fill the project name (the interview asks otherwise)
-#   --type saas|web|api|bot|cli
+#   --type saas|web|app|api|bot|cli   (free text, e.g. "mobile app")
 #   --no-interview        only copy the files; run /harness-init in Claude later
 #   --update              bring an installed project up to this template version
 #                         (no interview, your data is never overwritten — see below)
