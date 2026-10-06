@@ -28,6 +28,11 @@ Two ways to run it — same steps, same maker ≠ checker split:
 In both, the reviewer's non-blocking findings become `bug` / `debt` items in
 `harness/FEATURES.json` (`feature.sh add`), picked up later like features.
 
+A one-off `claude -p` you run by hand (to test a permission rule, a flag, a
+prompt) takes `--no-session-persistence`: otherwise it is saved next to the
+user's conversations and shows up in their session list as a chat they never
+started. `loop.sh` keeps persistence, so its runs can be replayed.
+
 ```bash
 ./harness/scripts/loop.sh once                              # one iteration
 0 3 * * * cd /path/to/project && ./harness/scripts/loop.sh run >> harness/.loop.log 2>&1
@@ -37,7 +42,7 @@ In both, the reviewer's non-blocking findings become `bug` / `debt` items in
 - The metric in `harness/GOAL.md` hit its target.
 - Budget (time / money / `MAX_ITER`) exhausted.
 - Two iterations in a row moved no metric → **stall** (see `harness/GOAL.md`).
-- A decision only a human can make → write it in `harness/STATE.md` "Open questions" and stop.
+- A decision only a human can make → write it in `harness/STATE.md` "Open questions" (next `Qn`) and stop.
 
 **What the loop does NOT do:** verify itself, replace your understanding of what
 it ships (review it), or think for you — a loop without judgement accelerates
@@ -82,6 +87,13 @@ Which get sharper every run vs. just run? Fewer loops that compound beat more lo
   git worktree add ../wt-<task> -b <task>   # … agent works there …
   git worktree remove ../wt-<task>
   ```
+- **Chat sessions too.** Several chats open on the project are parallel agents:
+  one switches branch under the other, commits its half-done files, overwrites
+  its build output. The SessionStart hook warns when another session is active
+  in the folder (`hooks/other-sessions.py`); the late one moves to a worktree
+  (`AGENTS.md` §5). The Stop hook checks the session's own worktree.
+  `loop.sh` switches branches where it runs: give it its own worktree if you
+  keep chatting in the main folder.
 - **Fresh context per worker**: each agent call starts clean (`loop.sh` already
   runs plan, execute and review as separate calls). Hand it a bounded input —
   the plan, the files — not the whole history.

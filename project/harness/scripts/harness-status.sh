@@ -45,7 +45,8 @@ for f in b["in_progress"]:
 if b["todo"]:
     print(f"  → next: {b['todo'][0]['id']} {b['todo'][0]['name']}  (say \"ship the next one\" / /ship)")
 for f in b["blocked"]:
-    print(f"  ⛔ blocked: {f['id']} {f['name']}")
+    why = f" — {f['blocked'][:90]}" if f.get("blocked") else ""
+    print(f"  ⛔ blocked: {f['id']} {f['name'][:60]}{why}")
 PY
 else
   echo "  ⚠ $H/FEATURES.json missing"
@@ -57,6 +58,8 @@ if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "  ⚠ not a git repository"
 else
   echo "  branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  # other checkouts of this repo (parallel sessions, AGENTS.md §5)
+  git worktree list 2>/dev/null | grep -vF "$(git rev-parse --show-toplevel) " | tr -s ' ' | sed 's/^/  worktree: /' || true
   git log --oneline -5 2>/dev/null | sed 's/^/  /' || true
   if [ -n "$(git status --porcelain)" ]; then
     echo "  ⚠ uncommitted changes:"

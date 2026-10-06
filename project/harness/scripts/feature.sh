@@ -4,6 +4,8 @@
 # Usage:
 #   ./harness/scripts/feature.sh <id> <status> [note]
 #       status: todo | in_progress | blocked | done | cut
+#       note: appended to the item's notes — with blocked, it's the reason
+#       (what the item waits on), kept in "blocked" until the item moves on
 #   ./harness/scripts/feature.sh add <type> <priority> "<name>" "<acceptance>" [note]
 #       type: feature | bug | debt   (ids: F-001 / B-001 / D-001)
 #       priority: p0 | p1 | p2 | p3   — prints the new id
@@ -18,7 +20,7 @@ SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/../.."   # project root
 
 if [ $# -lt 2 ]; then
-  sed -n '2,15s/^# \{0,1\}//p' "$SELF" >&2; exit 2
+  sed -n '2,17s/^# \{0,1\}//p' "$SELF" >&2; exit 2
 fi
 
 python3 - "$@" <<'PY'
@@ -64,8 +66,17 @@ f = next((f for f in d.get("features", []) if f.get("id") == fid), None)
 if f is None:
     sys.exit(f"✗ {fid} not found in {active_p} (already archived in {done_p}?)")
 f["status"] = status
-if note:
-    f["notes"] = note
+def add_note(text):   # notes are appended, never replaced: they hold decisions and context
+    f["notes"] = f"{f['notes']} — {text}" if f.get("notes") else text
+if status == "blocked":
+    if note and f.get("blocked") and f["blocked"] != note:
+        add_note(f"was blocked ({today}): {f['blocked']}")   # a new reason doesn't erase the old one
+    if note:
+        f["blocked"] = note
+elif "blocked" in f:
+    add_note(f"was blocked ({today}): {f.pop('blocked')}")
+if note and status != "blocked":
+    add_note(note)
 d["updated"] = today
 
 if status in ("done", "cut"):

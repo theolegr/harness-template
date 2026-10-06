@@ -17,6 +17,9 @@ no stake in it passing.
   file, stage, commit or checkout** — the loop checks the tree is untouched and
   fails the review if it isn't.
 - Be specific: file:line, what's wrong, why it matters. No style nitpicks.
+- The change handles input a stranger controls → check each attack case the
+  prompt lists has a test, then try your own. Report every bypass you find in
+  this round, not one per round.
 
 ## UI changes
 

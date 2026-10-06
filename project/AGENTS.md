@@ -87,6 +87,20 @@ are the way they are.
    harness doesn't cover, check `harness/guide/SKILLS.md`, suggest at most 2 with the reason, install only with an OK.
 8. **Brainstorm with the strategist.** For an overview, "what's next?", or an empty backlog, use the `strategist`
    subagent (read-only). Show its proposals to the user; add the accepted ones with `feature.sh add`.
+9. **Another session in this folder → your own worktree.** The status at session start says so
+   (`⚠ OTHER SESSIONS`); uncommitted changes you didn't make are a sign too. If you'll change files:
+   `git worktree add ../<repo>-<topic> -b <branch>`, install the dependencies there, and in Claude Code
+   `EnterWorktree` with that path. Merge back, then remove the worktree, with the user's OK. In a folder
+   another session uses: never switch branches or `git stash`, and stage only your files (explicit paths,
+   not `git add -A`). Alone in the folder: work there as usual.
+10. **What waits on the user is written down, never only in the chat.** An item that needs their info,
+    choice or OK → `feature.sh <id> blocked "waiting on <user>: <what>"` (the reason is kept apart, the
+    notes stay); if it waits on an open question, cite its number (`Q3`). Any other question or decision
+    you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, as
+    `**Qn** — …`. Numbers are never reused: a new question takes the one after the section's
+    `> Last number: Qn` line (a quote, not a bullet; add it with the first question, update it each time); an answered question
+    leaves the list. The dashboard shows blocked items in the backlog with their `Qn`, and the open
+    questions in the State panel.
 
 ## 6. Session boot sequence
 
@@ -107,6 +121,7 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 | The goal + metric + /goal contract | `harness/GOAL.md` |
 | Visual direction, design values (read before any UI work) | `harness/DESIGN.md` |
 | Set the visual direction, first mockups | `.claude/skills/design/SKILL.md` (`/design`) |
+| Pages published outside the repo (canvases, diagrams, shared mockups) | `harness/ARTIFACTS.md` — add a line whenever you publish one |
 | Quality bar / instruments | `harness/EVAL.md` |
 | Test conventions | `harness/guide/TESTING.md` |
 | Decisions log | `harness/DECISIONS.md` |
@@ -116,4 +131,4 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 | A bug or gap in the harness itself (not the project) | `harness/TEMPLATE-FEEDBACK.md` (create it), then an issue or PR on the template repo |
 | External skills to suggest | `harness/guide/SKILLS.md` |
 | Health check (exit code = verdict) | `harness/scripts/harness-check.sh` |
-| Project state as JSON / as a page for the user | `harness/scripts/state.py` / `harness/scripts/dashboard.py --open` |
+| Project state as JSON / as a page for the user | `harness/scripts/state.py` / `harness/scripts/dashboard.py --open` (then rewritten at the end of each turn by the Stop hook; the open tab reloads itself) |

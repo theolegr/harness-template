@@ -80,6 +80,8 @@ Where the mockups live, in this order:
 
 Real content, no lorem ipsum; missing facts become placeholders like `[PRICE]`.
 Give the user the link and one line per direction. Let them pick, mix or reject.
+A new canvas gets its line in `harness/ARTIFACTS.md` right away (link, what,
+status), so the next session can find it.
 
 ## 3. Iterate on the chosen one
 
@@ -106,7 +108,8 @@ Give the user the link and one line per direction. Let them pick, mix or reject.
 2. `harness/DECISIONS.md`: one entry — what was chosen, why, what was rejected
    (directions, palettes, fonts, the elements the user crossed out). A new
    direction marks the old entry `superseded`.
-3. `harness/STATE.md` → Open questions: every open choice, prefixed "Design:",
+3. `harness/STATE.md` → Open questions: every open choice, numbered and prefixed
+   (`**Q4** — Design: …`, numbering in `AGENTS.md` §5, rule 10),
    with who decides and before which item.
 4. `harness/FEATURES.json`: the UI items' notes point to the mockup and to
    `DESIGN.md` ("implements the validated mockup, no improvised design").

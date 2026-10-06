@@ -7,6 +7,8 @@
 
 1. **Confirm the working directory.**
    `pwd` — you must be at the project root. If not, `cd` there.
+   The status warns `⚠ OTHER SESSIONS`, or there are uncommitted changes you didn't make, and you'll
+   change files → work in your own worktree first (`AGENTS.md` §5).
 
 2. **Read the state of the world.**
    Read `harness/STATE.md` (current status) and `harness/GOAL.md` (the target + metric).
@@ -54,7 +56,9 @@
 1. Run tests + update the eval score in `harness/EVAL.md`.
 2. Update the status of the item you touched: `./harness/scripts/feature.sh <id> <status>`
    (`done` / `cut` moves it to `FEATURES-DONE.json`). Don't edit statuses by hand.
-3. Update `harness/STATE.md` (what changed, what's next, any blocker).
+3. Update `harness/STATE.md` (what changed, what's next, any blocker). Anything that waits on the
+   user → a `blocked` item with its reason, or a line in Open questions (`AGENTS.md` §5).
 4. Append any real decision to `harness/DECISIONS.md` (dated, with rationale).
-5. `git add -A && git commit -m "<type>: <what>"`.
+5. `git add <your files> && git commit -m "<type>: <what>"` — `git add -A` only when you're alone in
+   this folder (no other session's work in it).
 6. If the loop continued nothing: log why in `harness/STATE.md`.

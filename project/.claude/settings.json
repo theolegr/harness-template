@@ -23,6 +23,11 @@
             "type": "command",
             "command": "cd \"$CLAUDE_PROJECT_DIR\" && ./harness/scripts/link-skills.sh 2>&1; ./harness/scripts/harness-status.sh 2>&1 | head -60",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/harness/scripts/hooks/other-sessions.py\"",
+            "timeout": 10
           }
         ]
       }
@@ -44,9 +49,25 @@
         "hooks": [
           {
             "type": "command",
+            "command": "[ -f \"$CLAUDE_PROJECT_DIR/harness/dashboard.html\" ] && python3 \"$CLAUDE_PROJECT_DIR/harness/scripts/dashboard.py\" >/dev/null 2>&1; exit 0",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/harness/scripts/hooks/stop-check.sh\"",
             "timeout": 600,
             "statusMessage": "harness-check…"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/harness/scripts/hooks/other-sessions.py\" end",
+            "timeout": 10
           }
         ]
       }

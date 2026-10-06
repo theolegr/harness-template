@@ -4,6 +4,13 @@
 # must NOT proceed.
 set -uo pipefail
 
+# macOS: keep the Mac awake while the checks run — a sleep mid-run fails them for
+# nothing. (Idle sleep only: closing the lid on battery still sleeps.)
+if [ "$(uname)" = Darwin ] && [ -z "${HARNESS_AWAKE:-}" ] && command -v caffeinate >/dev/null 2>&1; then
+  export HARNESS_AWAKE=1
+  exec caffeinate -i bash "$0" "$@"
+fi
+
 cd "$(dirname "$0")/../.."   # project root
 H=harness
 

@@ -29,7 +29,7 @@
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
 # version differs, it is written next to it as <file>.harness-new for review.
-# Your data (GOAL, STATE, FEATURES, EVAL, PLAN, DECISIONS, DESIGN in harness/)
+# Your data (GOAL, STATE, FEATURES, EVAL, PLAN, DECISIONS, DESIGN, ARTIFACTS in harness/)
 # is never touched once it exists: no merge, no <file>.harness-new.
 #
 # --update (run the NEW template on the project:
@@ -96,7 +96,7 @@ fi
 is_data() {
   case "$1" in
     harness/GOAL.md|harness/STATE.md|harness/FEATURES.json|harness/EVAL.md|harness/PLAN.md|\
-    harness/DECISIONS.md|harness/DESIGN.md) return 0;;
+    harness/DECISIONS.md|harness/DESIGN.md|harness/ARTIFACTS.md) return 0;;
   esac
   return 1
 }
@@ -210,7 +210,7 @@ fi
 # 3. .gitignore — the template copy and the loop's runtime files never go in git
 touch .gitignore
 for pat in harness/template/ harness/.loop.log harness/.loop.stop harness/.check.ok harness/dashboard.html \
-           '*.harness-new'; do
+           harness/.sessions-ended '*.harness-new'; do
   grep -qxF "$pat" .gitignore || echo "$pat" >> .gitignore
 done
 echo "  + .gitignore entries"
