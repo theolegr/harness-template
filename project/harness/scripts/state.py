@@ -230,7 +230,9 @@ def git():
         commits.append({"hash": h, "date": d, "subject": s})
     dirty = [l for l in (run("status", "--porcelain") or "").splitlines()
              if l[3:].strip('"') not in RUNTIME]
-    return {"repo": True, "branch": (run("rev-parse", "--abbrev-ref", "HEAD") or "?").strip(),
+    # symbolic-ref: a repo with no commit yet still has a branch name
+    branch = run("symbolic-ref", "--short", "-q", "HEAD") or run("rev-parse", "--short", "HEAD") or "?"
+    return {"repo": True, "branch": branch.strip(),
             "commits": commits, "uncommitted": dirty}
 
 
