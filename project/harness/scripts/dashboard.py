@@ -97,14 +97,20 @@ def fold(key, title, body, n=None, opened=False):
             f'<summary>{title}{count}{chev()}</summary><div class="fold-body">{body}</div></details>')
 
 
-def item(f, mark, ms_of):
+def qchip(q, open_qs):
+    """A Q<n> cited by a blocked item: red if it's an open question, grey if not (answered, or not a number)."""
+    if q in open_qs:
+        return f'<span class="chip q" title="waits on open question {q} (STATE.md)">{q}</span>'
+    return f'<span class="chip q unknown" title="{q} is not among the open questions — answered?">{q}?</span>'
+
+
+def item(f, mark, ms_of, open_qs=frozenset()):
     """One backlog row: the title is always visible, the rest folds out."""
     fid, kind = f.get("id", ""), f.get("type", "feature")
     prio = str(f.get("priority", "")).upper()
     tags = "".join(f'<span class="chip ms">{esc(m)}</span>' for m in ms_of.get(fid, []))
     if f.get("status") == "blocked":   # the open question(s) it waits on, cited as Q<n> in its reason
-        tags += "".join(f'<span class="chip q" title="waits on open question {q} (STATE.md)">{q}</span>'
-                        for q in dict.fromkeys(QREF.findall(f.get("blocked") or "")))
+        tags += "".join(qchip(q, open_qs) for q in dict.fromkeys(QREF.findall(f.get("blocked") or "")))
     if prio:
         tags += f'<span class="chip">{esc(prio)}</span>'
     if f.get("status") == "done" and f.get("closed"):
@@ -268,9 +274,10 @@ def render(s, refresh=RELOAD):
     if b["blocked"]:
         groups.append(("Blocked", b["blocked"], lambda i: '⛔<span class="sr"> blocked</span>'))
     groups.append(("Done", b["shipped"], lambda i: '✓<span class="sr"> done</span>'))
+    open_qs = {m.group(1) for q in st["open_questions"] if (m := re.match(r"\*\*(Q\d+)\*\*", q))}
     lists = ""
     for title, items, mark in groups:
-        rows = "".join(item(f, mark(i), ms_of) for i, f in enumerate(items))
+        rows = "".join(item(f, mark(i), ms_of, open_qs) for i, f in enumerate(items))
         lists += (f'<h3 class="group">{title} <span class="count">{len(items)}</span></h3>'
                   + (f'<div class="items">{rows}</div>' if rows else empty(
                       "Nothing left — ask the strategist for ideas, or `./harness/scripts/feature.sh add …`"
@@ -467,6 +474,7 @@ grid-template-areas:"mark line tags chev";gap:2px 10px;align-items:start;padding
 color:var(--ink-2)}
 .chip.ms{border-color:transparent;background:var(--track);color:var(--ink)}
 .chip.q{border-color:var(--critical);color:var(--ink)}
+.chip.q.unknown{border-color:var(--border);color:var(--muted)}
 .when{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
 @media (max-width:560px){.item>summary{grid-template-columns:22px minmax(0,1fr) 14px;
 grid-template-areas:"mark line chev" ". tags ."}.tags{min-height:0}}

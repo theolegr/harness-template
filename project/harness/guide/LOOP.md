@@ -42,7 +42,7 @@ started. `loop.sh` keeps persistence, so its runs can be replayed.
 - The metric in `harness/GOAL.md` hit its target.
 - Budget (time / money / `MAX_ITER`) exhausted.
 - Two iterations in a row moved no metric → **stall** (see `harness/GOAL.md`).
-- A decision only a human can make → write it in `harness/STATE.md` "Open questions" and stop.
+- A decision only a human can make → write it in `harness/STATE.md` "Open questions" (next `Qn`) and stop.
 
 **What the loop does NOT do:** verify itself, replace your understanding of what
 it ships (review it), or think for you — a loop without judgement accelerates

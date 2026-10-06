@@ -96,9 +96,11 @@ are the way they are.
 10. **What waits on the user is written down, never only in the chat.** An item that needs their info,
     choice or OK → `feature.sh <id> blocked "waiting on <user>: <what>"` (the reason is kept apart, the
     notes stay); if it waits on an open question, cite its number (`Q3`). Any other question or decision
-    you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, with the
-    next free number (numbers never change). The dashboard shows blocked items in the backlog with their
-    `Qn`, and the open questions in the State panel.
+    you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, as
+    `**Qn** — …`. Numbers are never reused: a new question takes the one after the section's
+    `Last number: Qn` line (add it with the first question, update it each time); an answered question
+    leaves the list. The dashboard shows blocked items in the backlog with their `Qn`, and the open
+    questions in the State panel.
 
 ## 6. Session boot sequence
 

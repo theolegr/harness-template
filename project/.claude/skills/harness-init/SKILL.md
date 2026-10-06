@@ -106,7 +106,7 @@ No suggestion is the normal case. Install nothing during the interview.
 | Target, metric table, constraints, non-goals | `harness/GOAL.md` — the target replaces the `<the target, in one sentence>` line under `## Target` (`harness-status.sh` prints that line) |
 | Features | `harness/FEATURES.json` (keep the schema: id `F-001`…, type `feature`, name, status `todo`, priority, acceptance, files, notes) + the MVP milestone. Bugs and debt come later, as `B-…` / `D-…` via `feature.sh add` |
 | Phase, health 🟢, "Working on" = first p0 feature, "Next" = the next ones, today's date | `harness/STATE.md` |
-| Skipped answers | `harness/STATE.md` → Open questions |
+| Skipped answers | `harness/STATE.md` → Open questions, numbered `**Q1** — …` with a `Last number:` line (`AGENTS.md` §5, rule 10) |
 | Autonomy / voice changes | `harness/guide/SOUL.md` |
 | No user-facing UI (CLI, API, bot) | `harness/DESIGN.md` → Status `no UI`; otherwise leave it for the `design` skill |
 | Loop commands | `AGENTS.md` §3 (the `loop.sh` line) |
