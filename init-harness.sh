@@ -29,6 +29,8 @@
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
 # version differs, it is written next to it as <file>.harness-new for review.
+# Your data (GOAL, STATE, FEATURES, EVAL, PLAN, DECISIONS, DESIGN in harness/)
+# is never touched once it exists: no merge, no <file>.harness-new.
 #
 # --update (run the NEW template on the project:
 #   git -C ~/harness-template pull && ~/harness-template/init-harness.sh --update my-project)
@@ -39,6 +41,7 @@
 #                                    else kept + <file>.harness-new to merge by hand
 #   you deleted it                 → not re-added
 #   new in the template            → added
+#   your data                      → never touched (says if the template's version changed)
 # then refreshes harness/template/. Nothing is committed: review with git diff.
 set -euo pipefail
 
@@ -50,7 +53,7 @@ while [ $# -gt 0 ]; do
     --type) TYPE="${2:?--type needs a value}"; shift 2;;
     --no-interview) INTERVIEW=0; shift;;
     --update) UPDATE=1; INTERVIEW=0; shift;;
-    -h|--help) sed -n '2,43s/^# \{0,1\}//p' "$0"; exit 0;;
+    -h|--help) sed -n '2,46s/^# \{0,1\}//p' "$0"; exit 0;;
     -*) echo "unknown option: $1" >&2; exit 2;;
     *) TARGET="$1"; shift;;
   esac
@@ -85,9 +88,18 @@ if [ "$UPDATE" -eq 1 ]; then
     BASE="harness/template/project"
   else
     echo "  ⚠ no harness/template/ — can't tell your edits from the template's: every file that"
-    echo "    differs is kept, with the new version next to it as <file>.harness-new"
+    echo "    differs is kept, with the new version next to it as <file>.harness-new (your data: just kept)"
   fi
 fi
+
+# The project's data: once it exists, never merged, replaced or shadowed by a .harness-new
+is_data() {
+  case "$1" in
+    harness/GOAL.md|harness/STATE.md|harness/FEATURES.json|harness/EVAL.md|harness/PLAN.md|\
+    harness/DECISIONS.md|harness/DESIGN.md) return 0;;
+  esac
+  return 1
+}
 
 # 3-way merge of the template's changes (base → new) into your file. Fails —
 # leaving your file untouched — on overlapping edits or a merge that isn't valid JSON.
@@ -118,6 +130,12 @@ while IFS= read -r f; do
     echo "  + $f"
   elif cmp -s "$new" "$f"; then
     echo "  · $f (already up to date)"
+  elif is_data "$f"; then
+    if [ -n "$base" ] && ! cmp -s "$base" "$new"; then
+      echo "  · $f (your data, untouched — the template's version changed: harness/template/project/$f)"
+    else
+      echo "  · $f (your data, untouched)"
+    fi
   elif [ -n "$base" ] && cmp -s "$base" "$f"; then
     cp "$new" "$f"
     echo "  ↑ $f (updated — you hadn't edited it)"

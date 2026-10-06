@@ -47,7 +47,7 @@ def placeholder(text):
       cell, a JSON string, what follows a label: <command>, **Repo**: <url>, "<criteria>",
       <F-XXX> — <what>, Did: <what>;
     - `code` holding only a <…>: `<cmd>`.
-    A <…> inside a command or a path (sites:new <client>, feature.sh <id> <status>,
+    A <…> inside a command or a path (npm run new <name>, feature.sh <id> <status>,
     `../<repo>-<topic>`) is an argument, not a placeholder; nor is an HTML tag with attributes,
     nor a Markdown autolink or email (<https://…>, <name@example.com>)."""
     if any(TOKEN.fullmatch(c.strip()) for c in CODE.findall(text)):
