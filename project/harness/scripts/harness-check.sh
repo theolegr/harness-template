@@ -12,6 +12,13 @@ H=harness
 LINT_CMD=""
 TEST_CMD=""
 
+# package.json scripts run with the package manager its lockfile names (npm if none)
+PM=npm
+for lock in pnpm-lock.yaml:pnpm yarn.lock:yarn bun.lock:bun bun.lockb:bun; do
+  if [ -f "${lock%%:*}" ]; then PM="${lock##*:}"; break; fi
+done
+RUN="$PM run"; [ "$PM" = npm ] && RUN="npm run --silent"
+
 FAIL=0
 step() { printf "\n── %s ──\n" "$1"; }
 
@@ -45,7 +52,7 @@ step "Lint / typecheck"
 if [ -n "$LINT_CMD" ]; then
   echo "  \$ $LINT_CMD"; bash -c "$LINT_CMD" || FAIL=1
 elif [ -f package.json ] && grep -q '"lint"' package.json 2>/dev/null; then
-  npm run --silent lint || FAIL=1
+  echo "  \$ $RUN lint"; $RUN lint || FAIL=1
 elif [ -f pyproject.toml ] || [ -f requirements.txt ]; then
   if command -v ruff >/dev/null 2>&1; then
     ruff check . || FAIL=1
@@ -61,7 +68,7 @@ step "Tests"
 if [ -n "$TEST_CMD" ]; then
   echo "  \$ $TEST_CMD"; bash -c "$TEST_CMD" || FAIL=1
 elif [ -f package.json ] && grep -q '"test"' package.json 2>/dev/null; then
-  npm test --silent || FAIL=1
+  echo "  \$ $RUN test"; $RUN test || FAIL=1   # `run test`: `bun test` would skip the script
 elif [ -f pytest.ini ] || [ -f pyproject.toml ]; then
   if python3 -c 'import pytest' 2>/dev/null; then
     python3 -m pytest -q; rc=$?

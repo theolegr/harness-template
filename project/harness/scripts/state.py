@@ -20,7 +20,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 H = ROOT / "harness"
-PLACEHOLDER = re.compile(r"<[A-Za-z][^>]*>")
+TOKEN = re.compile(r"<([A-Za-z][^>]*)>")
+CODE = re.compile(r"`([^`]*)`")
+AUTOLINK = re.compile(r"<[^<>\s]*(?:://|@)[^<>\s]*>")
+# what may precede a value: a list marker, ❌, a label (**Repo**:, Did:, "name":)
+FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|[A-Za-z][\w ]{0,30}:\s+|"[\w-]+":\s*)?')
 RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harness/dashboard.html")
 REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/FEATURES.json",
             "harness/EVAL.md", "harness/PLAN.md", "harness/DECISIONS.md", "harness/guide/BOOT.md"]
@@ -36,10 +40,32 @@ def read(rel):
         return ""
 
 
+def placeholder(text):
+    """True when text still holds a template placeholder:
+    - a <…> with a space in it: <the target, in one sentence>, <e.g. Python>;
+    - a value made of nothing but <…> and punctuation — a line, a list item, a table
+      cell, a JSON string, what follows a label: <command>, **Repo**: <url>, "<criteria>",
+      <F-XXX> — <what>, Did: <what>;
+    - `code` holding only a <…>: `<cmd>`.
+    A <…> inside a command or a path (npm run new <name>, feature.sh <id> <status>,
+    `../<repo>-<topic>`) is an argument, not a placeholder; nor is an HTML tag with attributes,
+    nor a Markdown autolink or email (<https://…>, <name@example.com>)."""
+    if any(TOKEN.fullmatch(c.strip()) for c in CODE.findall(text)):
+        return True
+    text = AUTOLINK.sub("", CODE.sub("", text))
+    if any(" " in m.group(1) and '="' not in m.group(1) for m in TOKEN.finditer(text)):
+        return True
+    for cell in text.split("|"):
+        v = FIELD.sub("", cell)
+        if TOKEN.search(v) and not re.search(r"\w", TOKEN.sub("", v)):
+            return True
+    return False
+
+
 def filled(v):
     """The value, or None when it's empty, a placeholder or a template choice list."""
     v = (v or "").strip()
-    if not v or PLACEHOLDER.search(v) or " | " in v or v in ("—", "-"):
+    if not v or placeholder(v) or " | " in v or v in ("—", "-"):
         return None
     return v
 
@@ -212,16 +238,32 @@ def checks():
     return {"last_pass": when, "loop_log": log[-15:], "loop_stopped": (H / ".loop.stop").exists()}
 
 
+def update_warnings():
+    """<file>.harness-new left by init-harness.sh --update (you and the template changed the same lines)."""
+    # where the template writes — never harness/template/ or .claude/worktrees/
+    where = [(".", "*"), (".claude", "*"), ("harness", "*"), ("harness/guide", "**/*"), ("harness/scripts", "**/*"),
+             (".claude/agents", "**/*"), (".claude/skills", "**/*"), (".agents", "**/*")]
+    pending = sorted(str(p.relative_to(ROOT)) for d, pat in where for p in (ROOT / d).glob(pat + ".harness-new"))
+    return [f"template update not merged: {', '.join(pending)} — merge what you need into the file "
+            f"next to it, then delete the .harness-new"] if pending else []
+
+
+def placeholder_lines():
+    """Lines of the files the interview fills in that still hold a placeholder."""
+    return sum(placeholder(l) for f in ("AGENTS.md", "harness/GOAL.md", "harness/FEATURES.json")
+               for l in read(f).splitlines())
+
+
 def collect():
     b = backlog()
     warnings = list(b.pop("warnings"))
-    ph = sum(len(PLACEHOLDER.findall(l)) > 0
-             for f in ("AGENTS.md", "harness/GOAL.md", "harness/FEATURES.json") for l in read(f).splitlines())
+    ph = placeholder_lines()
     if ph:
         warnings.append(f"{ph} lines still have <placeholders> — run /harness-init in Claude Code")
     if b["stale"]:
         warnings.append(f"still in FEATURES.json: {', '.join(b['stale'])} — archive with "
                         f"./harness/scripts/feature.sh <id> done")
+    warnings += update_warnings()
     missing = [f for f in REQUIRED if not (ROOT / f).exists()]
     if missing:
         warnings.append("missing: " + ", ".join(missing))

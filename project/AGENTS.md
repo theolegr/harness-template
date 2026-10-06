@@ -41,6 +41,9 @@
 # test
 <command>
 
+# lint
+<command>
+
 # deploy
 <command>
 
@@ -110,6 +113,7 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 | Active plan | `harness/PLAN.md` |
 | Outer loop, automations, parallel work | `harness/guide/LOOP.md` |
 | Memory + learning from corrections | `harness/guide/MEMORY.md` |
+| A bug or gap in the harness itself (not the project) | `harness/TEMPLATE-FEEDBACK.md` (create it), then an issue or PR on the template repo |
 | External skills to suggest | `harness/guide/SKILLS.md` |
 | Health check (exit code = verdict) | `harness/scripts/harness-check.sh` |
 | Project state as JSON / as a page for the user | `harness/scripts/state.py` / `harness/scripts/dashboard.py --open` |

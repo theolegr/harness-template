@@ -29,6 +29,8 @@
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
 # version differs, it is written next to it as <file>.harness-new for review.
+# Your data (GOAL, STATE, FEATURES, EVAL, PLAN, DECISIONS, DESIGN in harness/)
+# is never touched once it exists: no merge, no <file>.harness-new.
 #
 # --update (run the NEW template on the project:
 #   git -C ~/harness-template pull && ~/harness-template/init-harness.sh --update my-project)
@@ -39,6 +41,7 @@
 #                                    else kept + <file>.harness-new to merge by hand
 #   you deleted it                 → not re-added
 #   new in the template            → added
+#   your data                      → never touched (says if the template's version changed)
 # then refreshes harness/template/. Nothing is committed: review with git diff.
 set -euo pipefail
 
@@ -50,7 +53,7 @@ while [ $# -gt 0 ]; do
     --type) TYPE="${2:?--type needs a value}"; shift 2;;
     --no-interview) INTERVIEW=0; shift;;
     --update) UPDATE=1; INTERVIEW=0; shift;;
-    -h|--help) sed -n '2,43s/^# \{0,1\}//p' "$0"; exit 0;;
+    -h|--help) sed -n '2,46s/^# \{0,1\}//p' "$0"; exit 0;;
     -*) echo "unknown option: $1" >&2; exit 2;;
     *) TARGET="$1"; shift;;
   esac
@@ -85,9 +88,18 @@ if [ "$UPDATE" -eq 1 ]; then
     BASE="harness/template/project"
   else
     echo "  ⚠ no harness/template/ — can't tell your edits from the template's: every file that"
-    echo "    differs is kept, with the new version next to it as <file>.harness-new"
+    echo "    differs is kept, with the new version next to it as <file>.harness-new (your data: just kept)"
   fi
 fi
+
+# The project's data: once it exists, never merged, replaced or shadowed by a .harness-new
+is_data() {
+  case "$1" in
+    harness/GOAL.md|harness/STATE.md|harness/FEATURES.json|harness/EVAL.md|harness/PLAN.md|\
+    harness/DECISIONS.md|harness/DESIGN.md) return 0;;
+  esac
+  return 1
+}
 
 # 3-way merge of the template's changes (base → new) into your file. Fails —
 # leaving your file untouched — on overlapping edits or a merge that isn't valid JSON.
@@ -118,6 +130,12 @@ while IFS= read -r f; do
     echo "  + $f"
   elif cmp -s "$new" "$f"; then
     echo "  · $f (already up to date)"
+  elif is_data "$f"; then
+    if [ -n "$base" ] && ! cmp -s "$base" "$new"; then
+      echo "  · $f (your data, untouched — the template's version changed: harness/template/project/$f)"
+    else
+      echo "  · $f (your data, untouched)"
+    fi
   elif [ -n "$base" ] && cmp -s "$base" "$f"; then
     cp "$new" "$f"
     echo "  ↑ $f (updated — you hadn't edited it)"
@@ -132,7 +150,12 @@ while IFS= read -r f; do
   fi
 done < <(cd "$SRC/project" && find . -type f ! -name '.DS_Store' ! -path '*/__pycache__/*' | sed 's|^\./||' | sort)
 chmod +x harness/scripts/*.sh harness/scripts/*.py
-mkdir -p tests
+# tests/ only for a new project with no stack yet (a monorepo keeps its tests in its packages)
+MANIFEST=0
+for m in package.json pyproject.toml requirements.txt go.mod Cargo.toml Gemfile pom.xml build.gradle composer.json; do
+  if [ -f "$m" ]; then MANIFEST=1; fi
+done
+if [ "$UPDATE" -eq 0 ] && [ "$MANIFEST" -eq 0 ]; then mkdir -p tests; fi
 if [ -f CLAUDE.md ] && ! grep -q '@AGENTS.md' CLAUDE.md; then
   echo "  ⚠ your CLAUDE.md doesn't import AGENTS.md — add a line '@AGENTS.md' to it"
   echo "    (the interview will offer to do it)"
@@ -144,6 +167,22 @@ if [ "$SRC" != "$TARGET/harness/template" ] && { [ ! -e harness/template ] || [ 
   rm -rf harness/template.tmp && mkdir -p harness/template.tmp
   (cd "$SRC" && tar --exclude .git --exclude .DS_Store --exclude __pycache__ -cf - .) \
     | (cd harness/template.tmp && tar -xf -)
+  # the template's own files, listed — the next update tells them from the ones you add
+  (cd harness/template.tmp && find . -type f ! -name .harness-files | sed 's|^\./||' | sort) \
+    > harness/template.tmp/.harness-files
+  # a file you added there (notes…) isn't the template's: keep it, but say where it belongs.
+  # Without the list (installed by an older version), anything the new template lacks counts as yours.
+  if [ -d harness/template ]; then
+    while IFS= read -r f; do
+      [ -e "harness/template.tmp/$f" ] && continue
+      if [ -f harness/template/.harness-files ] && grep -qxF "$f" harness/template/.harness-files; then
+        continue   # the template's, dropped upstream
+      fi
+      mkdir -p "harness/template.tmp/$(dirname "$f")" && cp -p "harness/template/$f" "harness/template.tmp/$f"
+      echo "  · kept harness/template/$f — not part of the template; harness notes belong in harness/TEMPLATE-FEEDBACK.md"
+    done < <(cd harness/template && find . -type f ! -name .DS_Store ! -name .harness-files ! -path './.git/*' \
+               | sed 's|^\./||')
+  fi
   rm -rf harness/template && mv harness/template.tmp harness/template
   echo "  + harness/template/ (copy of the template, git-ignored)"
 fi
@@ -196,7 +235,7 @@ if [ "$UPDATE" -eq 1 ]; then
   if [ "${#REVIEW[@]}" -gt 0 ]; then
     echo "   To merge by hand (you and the template changed the same lines):"
     for f in "${REVIEW[@]}"; do echo "     $f  ←  $f.harness-new"; done
-    echo "   Then delete the .harness-new files."
+    echo "   Then delete the .harness-new files (harness-status.sh reminds you until they're gone)."
   fi
   exit 0
 fi
