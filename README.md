@@ -44,7 +44,7 @@ The init copies the files (below), then **starts Claude, which interviews you**
 (~10 min: project, stack + commands, goal + metric, first features, autonomy)
 and fills everything in. It shows the result and commits only with your OK.
 
-- Options: `--name "My Project"`, `--type saas|web|api|bot|cli`, `--no-interview`.
+- Options: `--name "My Project"`, `--type saas|web|app|api|bot|cli` (free text, e.g. `"mobile app"`), `--no-interview`.
 - Or copy the template into the project first and run it from there:
   `mkdir -p my-project/harness && cp -R /path/to/harness-template my-project/harness/template`,
   then `cd my-project && ./harness/template/init-harness.sh`.

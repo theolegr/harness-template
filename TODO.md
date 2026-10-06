@@ -6,8 +6,9 @@ tick it off, then update the *Status* note in the README.
 
 ## Real-world test — one small project, end to end
 
-- [ ] `init-harness.sh` on a new folder → the interview fills every file;
+- [x] `init-harness.sh` on a new folder → the interview fills every file;
       `harness-status.sh` shows the target and no placeholder warning.
+      *(2026-09-29, first real project: existing folder, `--no-interview` then `harness-init`.)*
 - [ ] `/ship` on 2–3 features:
   - [ ] it shows the plan and waits for the OK before building
   - [ ] the `reviewer` subagent is really launched (fresh context), ends with
@@ -21,8 +22,9 @@ tick it off, then update the *Status* note in the README.
 - [ ] Hooks in a real session: SessionStart shows the status; the guard refuses
       `rm -rf src` and asks before a migration; the Stop hook sends the agent
       back on a red check.
-- [ ] A project skill created in `.agents/skills/` is linked and usable as
+- [x] A project skill created in `.agents/skills/` is linked and usable as
       `/<name>` in the next session.
+      *(2026-09-29, first real project: `react-native-testing`, linked by `link-skills.sh`, usable in the same session.)*
 - [ ] `/design` on a project with screens: the interview asks "inspiration or
       copy?" for each reference; 2–3 directions land on a canvas; a crossed-out
       element is removed and the mark cleaned up; `DESIGN.md` gets exact values;

@@ -117,6 +117,12 @@ Rules while writing:
 - Replace placeholders; don't rewrite the surrounding doctrine text.
 - Delete example rows (`e.g. …`) once real rows exist.
 - `harness/FEATURES.json` must stay valid JSON.
+- Brand-new project, no code yet: guard `TEST_CMD` / `LINT_CMD` so `harness-check.sh`
+  stays green until the first feature creates the app, e.g.
+  `TEST_CMD='if [ -f package.json ]; then npm test --silent; else echo "  no app yet: nothing to test"; fi'`.
+  Unguarded, `npm test` fails before `package.json` exists, and the Stop hook then
+  sends every turn back. The first feature's acceptance criterion should make the
+  real commands pass.
 - Never touch `harness/template/`.
 
 ## 3. Verify, show, commit

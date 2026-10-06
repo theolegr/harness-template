@@ -4,7 +4,7 @@
 > **suggests** one when the project actually needs it, and says why. It never
 > suggests a skill just because it exists, and never installs one without an OK.
 >
-> Install commands checked on **2026-09-25**. These tools move fast: before
+> Install commands checked on **2026-09-25** (Expo, React Native Testing and `--agent universal`: **2026-09-29**). These tools move fast: before
 > installing, read the repo README and use its current command if it differs.
 
 ## The rule: augment, never replace
@@ -39,6 +39,10 @@ How to suggest:
 If accepted:
 1. Show the exact command, then run it. It fetches code from GitHub.
    Slash commands (`/plugin …`) can't run from a shell: give them to the user.
+   For `npx skills add`, pass `--agent universal`: the skill lands in
+   `.agents/skills/`, the home of project skills, and `link-skills.sh` links it
+   for Claude Code. With `--agent claude-code` it lands in `.claude/skills/`
+   only, where other agents don't look.
 2. Log it in `harness/DECISIONS.md`: skill, repo, why, date.
    **Log declined suggestions too**, so they aren't suggested again.
 
@@ -51,8 +55,9 @@ Not in the list? `npx skills find <query>` searches the open directory
 
 | Skill | Repo | Suggest when | Install |
 |---|---|---|---|
-| Supabase + Postgres best practices | [supabase/agent-skills](https://github.com/supabase/agent-skills) | Supabase in the stack, or Postgres anywhere | `npx skills add supabase/agent-skills` |
-| React / Next.js / React Native, web design guidelines, Vercel deploy | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | React-family frontend, or hosting on Vercel | `npx skills add vercel-labs/agent-skills` |
+| Supabase + Postgres best practices | [supabase/agent-skills](https://github.com/supabase/agent-skills) | Supabase in the stack, or Postgres anywhere | `npx skills add supabase/agent-skills --agent universal` |
+| React / Next.js / React Native, web design guidelines, Vercel deploy | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | React or Next.js web frontend, or hosting on Vercel. For an Expo app, prefer expo/skills: the React Native part here is one generic page, and the default install adds 8 web/Vercel skills | `npx skills add vercel-labs/agent-skills --agent universal` |
+| Expo, official: project structure, Expo Router, design tokens, animation, EAS releases | [expo/skills](https://github.com/expo/skills) | Expo or React Native mobile app | `claude plugin install expo@claude-plugins-official --scope project` |
 | modern-python (uv, ruff, pytest) | [trailofbits/skills](https://github.com/trailofbits/skills) | Python project | `/plugin marketplace add trailofbits/skills` then install `modern-python` |
 
 ### Testing & verification (feeds `harness/EVAL.md` and `harness-check.sh`)
@@ -62,6 +67,7 @@ Not in the list? `npx skills find <query>` searches the open directory
 | Playwright | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Web UI whose acceptance criteria are checked in a browser. The README now recommends its CLI + skills over the MCP for coding agents: check it first | `claude mcp add playwright npx @playwright/mcp@latest` |
 | webapp-testing | [anthropics/skills](https://github.com/anthropics/skills) (example-skills) | Web app with no E2E setup yet, lighter than a full Playwright suite | `/plugin marketplace add anthropics/skills` then `/plugin install example-skills@anthropic-agent-skills` |
 | mutation-testing | [trailofbits/skills](https://github.com/trailofbits/skills) | Tests pass but you doubt they catch anything (useful for the maker ≠ checker loop) | `/plugin marketplace add trailofbits/skills` then install `mutation-testing` |
+| react-native-testing (React Native Testing Library) | [callstack/react-native-testing-library](https://github.com/callstack/react-native-testing-library) | React Native component tests with Jest | `npx skills add callstack/react-native-testing-library --skill react-native-testing --agent universal` |
 
 ### Security
 

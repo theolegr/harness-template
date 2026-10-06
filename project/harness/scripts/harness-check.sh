@@ -92,7 +92,9 @@ fi
 # ── 5. No secrets committed ──
 step "Secret scan"
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  HITS=$(git grep -nIE '(api[_-]?key|secret|password|token)\s*[:=]\s*["'"'"'][A-Za-z0-9_\-]{16,}' -- ':!*.example' ':!*.md' 2>/dev/null | head -20 || true)
+  # --untracked: new files are the ones about to be committed. POSIX classes, not \s:
+  # Apple's git has no \s in -E and would only catch key="…" written without spaces.
+  HITS=$(git grep --untracked -nIE '(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9_-]{16,}' -- ':!*.example' ':!*.md' 2>/dev/null | head -20 || true)
   if [ -n "$HITS" ]; then echo "  ✗ possible secrets:"; echo "$HITS" | sed 's/^/    /'; FAIL=1; else echo "  ✓ none found"; fi
 else
   echo "  (not a git repo)"

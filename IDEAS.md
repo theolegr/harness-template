@@ -23,9 +23,14 @@ test, which will show what the agent actually uses.
 | I-11 | `harness-init` only on explicit request | XS | open |
 | I-12 | Slim the doctrine | M | open — after the test |
 | I-13 | Support pi as an agent | S | open |
+| I-14 | Guard: allow `rm -rf` in temp directories | XS | open |
+| I-15 | The installer's automatic first commit | XS | open |
+| I-16 | More guard hardening | S | open |
+| I-17 | Adopt skills that land in `.claude/skills/` | S | open |
 
 Sources: own ideas, and a comparison with [pi](https://github.com/earendil-works/pi)
-(commit `69f0be6`, 2026-10-02) — see *Context* at the end.
+(commit `69f0be6`, 2026-10-02) — see *Context* at the end. I-14 to I-17: the first real project
+(an Expo app, 2026-09-29).
 
 ---
 
@@ -182,6 +187,58 @@ template works there unchanged. Hooks and subagents don't (pi has none).
 - **B. Also port the hooks** as pi extensions (guard, stop-check).
 - **C. Ignore.**
 
+## I-14 — Guard: allow `rm -rf` in temp directories
+
+**Why.** In the first real project, `rm -rf` on the agent's own scratch folders (`/tmp/…`,
+`$TMPDIR/…`) was refused; the agent worked around it by creating new folders
+instead of cleaning up.
+
+**Options**
+- **A.** Accept absolute paths under `/tmp`, `/private/tmp` and `$TMPDIR` in
+  `SAFE_RM`, after `os.path.realpath` (so `/tmp/../home` doesn't slip
+  through), with tests. *Leaning.*
+- **B.** Keep it: zero loosening; fresh folder names work.
+
+## I-15 — The installer's automatic first commit
+
+**Why.** On a new repo, `init-harness.sh` commits "chore: add project harness"
+*before* the interview, while the README ("commits only with your OK") and
+`harness-init` promise a reviewed commit. In the first real project, the repo was initialised by
+hand first, to avoid it.
+
+**Options**
+- **A.** Keep it: a clean base commit before the interview.
+- **B.** Opt-in (`--commit`).
+- **C.** `git init` and stage only: the interview's commit, made with the
+  user's OK, is the first one. *Leaning* — one reviewed commit, and the
+  promise holds.
+
+## I-16 — More guard hardening
+
+**Why.** Still let through by the quote-aware guard (checked 2026-10-05):
+`ls | xargs rm -rf`, `find … -exec rm -rf {} +`, `find … -delete`,
+`git -C <dir> push --force` (a global option before the subcommand),
+`env -i rm -rf …`.
+
+**Proposal** — find the `rm` after `xargs` / `-exec`, treat `find -delete` like
+`rm -rf`, skip git's global options and `env`'s options before reading the
+command. One test per case in `tests/test_guard_bash.py`.
+
+**Open** — `find -delete` on a build or cache dir: allow it, like `SAFE_RM`?
+
+## I-17 — Adopt skills that land in `.claude/skills/`
+
+**Why.** `npx skills add … --agent claude-code` puts a skill in
+`.claude/skills/` only, where other agents don't look; in the first real project it was moved to
+`.agents/skills/` by hand. `SKILLS.md` now says `--agent universal`, but a
+skill installed another way still lands there.
+
+**Option** — `link-skills.sh` adopts such a folder (a real folder in
+`.claude/skills/` that isn't a harness skill): moves it to `.agents/skills/`,
+links it back, prints what it did.
+
+**Open** — may a session-start script move files on its own?
+
 ---
 
 ## Context — comparison with pi (2026-10-02)
@@ -211,6 +268,14 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### From the first real project · 2026-10-05
+
+Its six proposals (`PROPOSALS.md` on `feedback/first-real-project`): four are
+I-14 to I-17. The other two were settled by later changes. A standard
+`OPEN-DECISIONS.md` → open questions numbered `Qn` in `STATE.md`, cited by the
+blocked items that wait on them (`AGENTS.md` rule 10). A home for design specs
+→ the `design` skill and `harness/DESIGN.md`. Its bug fixes landed at the same time.
 
 ### I-02 — Safe git when several sessions share a checkout · 2026-10-05
 
