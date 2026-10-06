@@ -18,8 +18,10 @@ example, driven from a chat with Claude Code.
 
 > **Status: early.** The scripts (install, backlog, checks, hooks, `loop.sh`)
 > are tested on throwaway projects. The chat workflow — `/ship`, the reviewer
-> and strategist subagents — hasn't been run on a real project yet. What's
-> left to validate is in [TODO.md](TODO.md). Issues and feedback welcome.
+> and strategist subagents, the hooks — has run on three real projects (about
+> 70 items shipped). Not yet run for real: the `design` skill as written and
+> `loop.sh` with a real Claude. Details in [TODO.md](TODO.md). Issues and
+> feedback welcome.
 
 ## How it works
 
