@@ -8,7 +8,7 @@ cd "$(dirname "$0")/../.."   # project root
 H=harness
 
 # ── Project commands (filled by /harness-init; edit freely) ──
-# Leave empty to auto-detect (package.json scripts, ruff, pytest).
+# Leave empty to auto-detect (npm scripts, ruff, pytest).
 LINT_CMD=""
 TEST_CMD=""
 

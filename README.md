@@ -53,7 +53,8 @@ and fills everything in. It shows the result and commits only with your OK.
   ("proves nothing about the code yet"). Once the first feature exists, the
   test command set by the interview makes it a real gate.
 - Non-destructive — existing files are never touched; if the harness version
-  differs, it is written next to yours as `<file>.harness-new` for review.
+  differs, it is written next to yours as `<file>.harness-new` for review
+  (not for your data: `GOAL.md`, `STATE.md`, `FEATURES.json`… are just kept).
 
 ### Update a project already set up
 
@@ -70,8 +71,10 @@ template's. A file you never edited is replaced; a file the template didn't
 change stays yours; when both changed it, the two are merged (3-way) if the
 edits don't overlap, else yours is kept and the new version written next to it
 as `<file>.harness-new`. A file you deleted is not re-added; new files are
-added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, …) is never
-overwritten. No interview, no commit — review with `git diff`, then commit.
+added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, `EVAL.md`, `PLAN.md`,
+`DECISIONS.md`, `DESIGN.md`) is never touched — no merge, no `.harness-new`; the
+update only says when the template's version of one changed (the new one is in
+`harness/template/project/`). No interview, no commit — review with `git diff`, then commit.
 `harness-status.sh` lists the `.harness-new` files until you've merged and
 deleted them.
 
