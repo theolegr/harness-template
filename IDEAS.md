@@ -24,7 +24,7 @@ test, which will show what the agent actually uses.
 | I-12 | Slim the doctrine | M | open — after the test |
 | I-13 | Support pi as an agent | S | open |
 | I-14 | Guard: allow `rm -rf` in temp directories | XS | open |
-| I-15 | The installer's automatic first commit | XS | open |
+| I-15 | The installer's automatic first commit | XS | decided — C, done |
 | I-16 | More guard hardening | S | open |
 | I-17 | Adopt skills that land in `.claude/skills/` | S | open |
 
@@ -201,17 +201,7 @@ instead of cleaning up.
 
 ## I-15 — The installer's automatic first commit
 
-**Why.** On a new repo, `init-harness.sh` commits "chore: add project harness"
-*before* the interview, while the README ("commits only with your OK") and
-`harness-init` promise a reviewed commit. In the first real project, the repo was initialised by
-hand first, to avoid it.
-
-**Options**
-- **A.** Keep it: a clean base commit before the interview.
-- **B.** Opt-in (`--commit`).
-- **C.** `git init` and stage only: the interview's commit, made with the
-  user's OK, is the first one. *Leaning* — one reviewed commit, and the
-  promise holds.
+Decided — see *Decided* at the bottom.
 
 ## I-16 — More guard hardening
 
@@ -268,6 +258,20 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### I-15 — The installer's automatic first commit · 2026-10-05
+
+Chose **C, `git init` and stage only**: the interview's commit, made with the
+user's OK, is the first one — the README's promise holds. Only the harness
+files are staged (`AGENTS.md`, `CLAUDE.md`, `.gitignore`, `harness/`,
+`.claude/`, `.agents/`), never the rest of the folder: an existing project
+with an `.env` and no git would have had it committed. The same change fixes
+the repo detection (`git rev-parse --is-inside-work-tree`, not `[ -d .git ]`):
+in a worktree (`.git` is a file) the old check re-ran `git init` and committed
+the pending work; in a package of a monorepo it created a nested repo.
+Rejected: **A** (an unreviewed commit before the interview), **B** (a flag for
+what should be the default). Done in `init-harness.sh`; covered by
+`tests/smoke-install.sh`.
 
 ### From the first real project · 2026-10-05
 

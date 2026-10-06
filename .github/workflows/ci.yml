@@ -15,6 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -25,8 +26,8 @@ jobs:
           done
 
       - name: Python syntax
-        # ast.parse, not py_compile: no __pycache__ left in project/ for the install to copy
-        run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' project/harness/scripts/*.py project/harness/scripts/hooks/*.py tests/*.py
+        # compile(), not py_compile: same checks, no __pycache__ written
+        run: python3 -c 'import sys; [compile(open(f).read(), f, "exec") for f in sys.argv[1:]]' project/harness/scripts/*.py project/harness/scripts/hooks/*.py tests/*.py
 
       - name: Guard tests
         run: python3 tests/test_guard_bash.py

@@ -34,7 +34,8 @@ example, driven from a chat with Claude Code.
    the item is recorded and committed. A `strategist` subagent helps decide what
    comes next. Unattended, `loop.sh` runs the same loop.
 3. **Guard rails** — Claude Code hooks refuse destructive commands, ask before
-   migrations and deploys, and keep the agent working while the checks are red.
+   migrations and deploys, and send the agent back to work when it tries to stop
+   on a red check.
 4. **Update** — `init-harness.sh --update my-project` brings in a new version
    of the template: files you never edited are replaced, edits on both sides are
    merged (3-way), and your project data is never touched.
@@ -63,8 +64,8 @@ into `my-project/harness/template/` (git-ignored, without the template's own `.g
 The init copies the files (below), then **starts Claude, which interviews you**
 (~10 min: project, stack + commands, goal + metric, first features, autonomy)
 and fills everything in. It shows the result and commits only with your OK.
-(In a folder that isn't a git repo yet, the install itself makes a first commit
-of the harness files, before the interview.)
+(In a folder that isn't a git repo yet, the install runs `git init` and stages
+the harness files — nothing else in the folder, nothing committed.)
 
 - Options: `--name "My Project"`, `--type saas|web|app|api|bot|cli` (free text, e.g. `"mobile app"`), `--no-interview`.
 - Or copy the template into the project first and run it from there:

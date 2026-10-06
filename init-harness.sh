@@ -24,7 +24,8 @@
 #        .claude/settings.json, agents/      → hooks (guard, stop-check) + reviewer, strategist
 #        .agents/skills/                     → project skills folder
 #   2. Keeps the template itself in harness/template/ (git-ignored).
-#   3. Adds .gitignore entries, git-inits + commits if the repo is new.
+#   3. Adds .gitignore entries; outside a git repo, git-inits and stages the
+#      harness files (no commit: the interview commits, with your OK).
 #   4. Launches Claude with the harness-init interview.
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
@@ -197,13 +198,14 @@ targets = ["AGENTS.md", "harness/guide/SOUL.md", "harness/GOAL.md", "harness/STA
 for t in targets:
     if t not in added: continue
     p = pathlib.Path(t)
-    s = p.read_text()
+    s = old = p.read_text()
     if name:
         s = s.replace("<PROJECT NAME>", name).replace("<PROJECT>", name)
     if ptype:
         s = s.replace("- **Type**: SaaS / web app / API / tool / bot", f"- **Type**: {ptype}")
-    p.write_text(s)
-    print(f"  ✎ {t}: pre-filled")
+    if s != old:
+        p.write_text(s)
+        print(f"  ✎ {t}: pre-filled")
 PY
 fi
 
@@ -215,18 +217,19 @@ for pat in harness/template/ harness/.loop.log harness/.loop.stop harness/.check
 done
 echo "  + .gitignore entries"
 
-if [ ! -d .git ]; then
-  git init -q
-  git add -A
-  if git config user.email >/dev/null 2>&1; then
-    git commit -qm "chore: add project harness" || true
-  else   # no git identity configured yet: don't fail, but say so
-    git -c user.email=harness@local -c user.name=harness commit -qm "chore: add project harness" || true
-    echo "  ⚠ no git identity set — first commit signed 'harness'. Set yours: git config --global user.name/user.email"
-  fi
-  echo "  + git repository initialised (first commit made)"
-else
+# Inside any repo (a worktree, a package of a monorepo): use it. Otherwise git init.
+# Nothing is committed: the first commit is the interview's, made with your OK.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "  · git repo already present — not committing (review with git status)"
+else
+  git init -q
+  # stage the harness only, never the rest of the folder (an .env, build output…)
+  for p in AGENTS.md CLAUDE.md .gitignore harness .claude .agents; do
+    if [ -e "$p" ]; then git add -- "$p"; fi
+  done
+  echo "  + git repository initialised — harness files staged, nothing committed"
+  git config user.email >/dev/null 2>&1 \
+    || echo "  ⚠ no git identity set — before the first commit: git config --global user.name/user.email"
 fi
 
 if [ "$UPDATE" -eq 1 ]; then

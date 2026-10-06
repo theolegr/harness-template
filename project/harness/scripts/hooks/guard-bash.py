@@ -14,9 +14,8 @@ what a line hands to a shell (`bash -c "…"`, `eval`, a heredoc fed to `sh`) is
 checked too. Tests: tests/test_guard_bash.py in the template repo.
 
 A safety net, not a sandbox: it matches command patterns, so it catches an
-agent's mistakes, not every way to do damage (a script, or `find … -delete`,
-can still remove files — IDEAS.md I-16 in the template repo). For unattended
-runs, use a sandbox.
+agent's mistakes, not every way to do damage (a script can still delete
+files). For unattended runs, use a sandbox.
 
 Edit the lists below per project. Anything not matched goes through the normal
 permission flow.
