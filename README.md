@@ -134,7 +134,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | File | Role |
 |---|---|
 | `harness-status.sh` | **Show** state, don't describe it |
-| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): what waits on you first (blocked items with their reason, open questions), then progress, next item, milestones, the backlog as one ordered list (details fold out), metric and score trend, decisions, commits. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
+| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, the backlog as one ordered list (details fold out; a blocked item shows the numbered open question it waits on), metric and score trend, state and open questions, decisions, commits. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
 | `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
 | `loop.sh` | Outer loop engine with enforced maker/checker split |

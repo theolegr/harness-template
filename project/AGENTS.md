@@ -95,8 +95,10 @@ are the way they are.
    not `git add -A`). Alone in the folder: work there as usual.
 10. **What waits on the user is written down, never only in the chat.** An item that needs their info,
     choice or OK → `feature.sh <id> blocked "waiting on <user>: <what>"` (the reason is kept apart, the
-    notes stay). Any other question or decision you raised that's still open at the end of your turn →
-    `harness/STATE.md` → Open questions. Both show at the top of the dashboard, under "Waiting on you".
+    notes stay); if it waits on an open question, cite its number (`Q3`). Any other question or decision
+    you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, with the
+    next free number (numbers never change). The dashboard shows blocked items in the backlog with their
+    `Qn`, and the open questions in the State panel.
 
 ## 6. Session boot sequence
 

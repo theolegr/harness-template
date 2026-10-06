@@ -30,6 +30,7 @@ from state import ROOT, collect  # noqa: E402
 
 OUT = ROOT / "harness" / "dashboard.html"
 RELOAD = 30   # seconds: an open tab picks up a rewrite (the Stop hook's, --watch's) on its own
+QREF = re.compile(r"\bQ\d+\b")   # an open question of STATE.md (Q1, Q2…), cited in a blocked item's reason
 
 
 # ── Small helpers ──
@@ -101,6 +102,9 @@ def item(f, mark, ms_of):
     fid, kind = f.get("id", ""), f.get("type", "feature")
     prio = str(f.get("priority", "")).upper()
     tags = "".join(f'<span class="chip ms">{esc(m)}</span>' for m in ms_of.get(fid, []))
+    if f.get("status") == "blocked":   # the open question(s) it waits on, cited as Q<n> in its reason
+        tags += "".join(f'<span class="chip q" title="waits on open question {q} (STATE.md)">{q}</span>'
+                        for q in dict.fromkeys(QREF.findall(f.get("blocked") or "")))
     if prio:
         tags += f'<span class="chip">{esc(prio)}</span>'
     if f.get("status") == "done" and f.get("closed"):
@@ -224,19 +228,6 @@ def render(s, refresh=RELOAD):
     warn = (f'<div class="warn" role="status"><strong>⚠ Needs attention</strong>{ul(map(inline, s["warnings"]))}</div>'
             if s["warnings"] else "")
 
-    # waiting on the user, in one place: blocked items (and what they wait on), then the open questions
-    waits = []
-    if b["blocked"]:
-        waits.append(ul((f'<span class="id">{esc(f["id"])}</span> {inline(f.get("name"))}'
-                         + (f'<br><span class="muted">{inline(f["blocked"])}</span>' if f.get("blocked") else "")
-                         for f in b["blocked"]), "list plain"))
-    if st["open_questions"]:
-        waits.append(fold("questions", "Open questions", ul(map(inline, st["open_questions"])),
-                          len(st["open_questions"])))
-    n_waits = len(b["blocked"]) + len(st["open_questions"])
-    you = (f'<section class="card you"><h2>Waiting on you <span class="count">{n_waits}</span></h2>'
-           f'{"".join(waits)}</section>' if waits else "")
-
     # overview: how far, what's next, the milestones
     open_split = "".join(f'<li>{dot(k)}<strong>{n}</strong> {esc(k)}</li>'
                          for k, n in sorted(b["open_types"].items(), key=lambda kv: (
@@ -311,6 +302,9 @@ def render(s, refresh=RELOAD):
         state.append("<h3>Stalls</h3>" + ul(map(inline, st["stalls"])))
     if st["next"]:
         state.append(fold("next", "Next steps", ul(map(inline, st["next"]), "list ordered"), len(st["next"])))
+    if st["open_questions"]:
+        state.append(fold("questions", "Open questions", ul(map(inline, st["open_questions"])),
+                          len(st["open_questions"])))
     state_card = f'<section class="card"><h2>State</h2>{"".join(state)}</section>'
 
     act = []
@@ -346,7 +340,6 @@ def render(s, refresh=RELOAD):
 <header class="top"><div class="head-row"><h1>{esc(s["project"])}</h1><div class="meta">{"".join(meta)}</div></div>
 {goal}</header>
 {warn}
-{you}
 <div class="overview">{progress}{nxt_card}{ms_card}</div>
 <div class="layout">{backlog}<aside class="side">{goal_card}{state_card}{activity_card}</aside></div>
 <footer>Generated {esc(s["generated"].replace("T", " ")[:16])} · rewritten at the end of each agent turn, reloads
@@ -414,9 +407,6 @@ padding:8px 14px;font-size:13px}
 .split strong{color:var(--ink);font-weight:600;margin-right:3px}
 .next-title{font-size:18px;font-weight:600;line-height:1.35}
 .next-title .id{font-size:13px;margin-right:4px}
-.you{border-left:3px solid var(--critical)}
-.you .list.plain li+li{margin-top:8px;padding-top:8px;border-top:1px solid var(--grid)}
-.you .fold{margin-top:10px}
 .aside{margin-top:14px;padding-top:12px;border-top:1px solid var(--grid);font-size:13px;color:var(--ink-2)}
 .aside .label{margin-bottom:2px}
 .ms+.ms{border-top:1px solid var(--grid)}
@@ -476,6 +466,7 @@ grid-template-areas:"mark line tags chev";gap:2px 10px;align-items:start;padding
 .chip{border:1px solid var(--border);border-radius:5px;padding:0 5px;font-size:11px;font-weight:600;line-height:17px;
 color:var(--ink-2)}
 .chip.ms{border-color:transparent;background:var(--track);color:var(--ink)}
+.chip.q{border-color:var(--critical);color:var(--ink)}
 .when{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
 @media (max-width:560px){.item>summary{grid-template-columns:22px minmax(0,1fr) 14px;
 grid-template-areas:"mark line chev" ". tags ."}.tags{min-height:0}}
