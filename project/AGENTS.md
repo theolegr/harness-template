@@ -92,7 +92,10 @@ are the way they are.
    `git worktree add ../<repo>-<topic> -b <branch>`, install the dependencies there, and in Claude Code
    `EnterWorktree` with that path. Merge back, then remove the worktree, with the user's OK. In a folder
    another session uses: never switch branches or `git stash`, and stage only your files (explicit paths,
-   not `git add -A`). Alone in the folder: work there as usual.
+   not `git add -A`). Alone in the folder: work there as usual. Worktrees fill the disk (each has its own
+   dependencies and builds): when the status shows `── DISK ──`, show the user what it lists and run only
+   what they OK — an `rm -rf` outside the project is theirs to run (the guard refuses it). After removing
+   a worktree, `./harness/scripts/disk.py` shows what it left outside its folder (an Xcode build).
 10. **What waits on the user is written down, never only in the chat.** An item that needs their info,
     choice or OK → `feature.sh <id> blocked "waiting on <user>: <what>"` (the reason is kept apart, the
     notes stay); if it waits on an open question, cite its number (`Q3`). Any other question or decision

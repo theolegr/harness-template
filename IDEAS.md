@@ -27,6 +27,7 @@ test, which will show what the agent actually uses.
 | I-15 | The installer's automatic first commit | XS | decided — C, done |
 | I-16 | More guard hardening | S | open |
 | I-17 | Adopt skills that land in `.claude/skills/` | S | open |
+| I-18 | Disk space taken by parallel worktrees | S | decided — warn and suggest, done |
 
 Sources: own ideas, and a comparison with [pi](https://github.com/earendil-works/pi)
 (commit `69f0be6`, 2026-10-02) — see *Context* at the end. I-14 to I-17: the first real project
@@ -258,6 +259,26 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### I-18 — Disk space taken by parallel worktrees · 2026-10-10
+
+**Evidence (a real machine, 2026-10-08).** Three worktrees open in parallel
+on two real projects, the disk 90% full (45 GB free of 460). Measured: a worktree of an
+npm project carries a full copy of `node_modules` (2 GB); a pnpm one shares
+the store; Xcode keeps one DerivedData folder per checkout path (2.7–4.5 GB per
+native build), which `git worktree remove` leaves behind. Most of the disk was
+outside any project (iOS simulators 44 GB, `~/Library/Caches` 15 GB).
+
+Chose **a check in the status, warn and suggest only**: `disk.py`, silent
+while there's room, lists the other worktrees (size, merged or not) and the
+Xcode builds whose folder is gone, with the command that frees each one; it
+deletes nothing, the user OKs each command (`AGENTS.md` §5, rule 9). A
+worktree is offered for removal only when clean, idle for an hour and merged
+— a squash-merged branch shows as not merged, on purpose. Rejected: **an
+agent** (nothing to change in tools, context or model: a script is enough),
+**cleaning by itself** (deletes need the user's OK), **machine-wide caches**
+(simulators, browsers, package managers: not one project's, and they differ
+per machine — a personal cleanup, not the template).
 
 ### I-15 — The installer's automatic first commit · 2026-10-05
 

@@ -54,6 +54,29 @@ python3 -c 'import json, sys; sys.exit(not any(i["name"] == "Smoke feature" for 
   || fail "feature.sh add did not land in FEATURES.json"
 git add harness/FEATURES.json && git commit -qm "smoke: backlog item"
 
+step "disk: silent with room; when low, suggests and deletes nothing"
+git worktree add -q "$WORK/demo-merged" -b merged
+git worktree add -q "$WORK/demo-new" -b new
+(cd "$WORK/demo-new" && echo n > n.txt && git add n.txt && git commit -qm n)
+for w in demo-merged demo-new; do   # idle for an hour and more
+  touch -t 202001010000 .git/worktrees/$w/index .git/worktrees/$w/HEAD .git/worktrees/$w/logs/HEAD
+done
+XB="$WORK/home/Library/Developer/Xcode/DerivedData/App-x"   # an Xcode build whose project is gone
+mkdir -p "$XB"
+python3 -c 'import plistlib, sys; plistlib.dump({"WorkspacePath": sys.argv[2]}, open(sys.argv[1], "wb"))' \
+  "$XB/info.plist" "$WORK/gone/App.xcworkspace"
+HARNESS_DISK_WARN_GB=0 ./harness/scripts/harness-status.sh >"$WORK/status.log" 2>&1 || fail "harness-status.sh"
+lacks "$WORK/status.log" "── DISK ──"
+HOME="$WORK/home" HARNESS_DISK_WARN_GB=1000000 ./harness/scripts/harness-status.sh >"$WORK/status.log" 2>&1 \
+  || { cat "$WORK/status.log"; fail "harness-status.sh, disk low"; }
+has "$WORK/status.log" "── DISK ──"
+has "$WORK/status.log" "merged — merged into"
+grep -q '→ git worktree remove .*/demo-merged$' "$WORK/status.log" || fail "no git worktree remove for the merged worktree"
+has "$WORK/status.log" "new — not merged into"
+has "$WORK/status.log" '→ rm -rf "$HOME/Library/Developer/Xcode/DerivedData/App-x"'
+[ -d "$WORK/demo-merged" ] && [ -d "$WORK/demo-new" ] && [ -d "$XB" ] || fail "disk.py deleted something"
+git worktree remove "$WORK/demo-merged" && git worktree remove --force "$WORK/demo-new"
+
 # ── 2. Inside an existing repo: a worktree, a package of a monorepo
 step "install in a worktree and in a repo's subfolder"
 mkdir -p "$WORK/mono" && cd "$WORK/mono" && git init -q && echo a > a.txt && git add a.txt && git commit -qm init

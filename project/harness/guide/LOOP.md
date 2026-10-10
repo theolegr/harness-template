@@ -100,3 +100,8 @@ Which get sharper every run vs. just run? Fewer loops that compound beat more lo
 - **Cost**: the strongest model for anything that writes or gates code; a fast
   one only for read-only chores (see Model routing in `harness/GOAL.md`). Cap
   concurrency; every fan-out needs a stop condition.
+- **Disk**: each worktree holds its own dependencies and builds (npm copies
+  `node_modules` into each; pnpm shares one store), and Xcode keeps a build per
+  checkout path that outlives the worktree. Remove a worktree once merged. When
+  space runs low, the status lists the other worktrees and leftover builds
+  (`disk.py`) — it suggests, the user decides.

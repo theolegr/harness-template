@@ -164,6 +164,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, what waits on you (the open questions and, when kept, `OPEN-DECISIONS.md`, each linked to the items and milestones it holds up), the backlog as one ordered list (details fold out; a blocked item links to the numbered open question it waits on), metric and score trend, state, decisions, commits; the published pages (`ARTIFACTS.md`) one click away under the goal. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
 | `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
+| `disk.py` | When the disk runs low (under 15% free, 50 GB at most), shows what this project could free: the other worktrees (size, merged or not; `git worktree remove` for the clean, idle, merged ones) and the Xcode builds whose folder is gone. Suggests the commands, never runs them. In the status at session start, silent while there's room |
 | `loop.sh` | Outer loop engine with enforced maker/checker split |
 | `link-skills.sh` | Links each `.agents/skills/<name>` into `.claude/skills/` (the only place Claude Code loads skills from); run at session start |
 | `feature.sh` | `add` a feature / bug / debt item; change a status — `done` / `cut` archives it to `FEATURES-DONE.json`; `blocked "<reason>"` keeps the reason apart; notes are appended, never replaced |
@@ -220,7 +221,7 @@ doesn't choose to run it, so it can't forget or bypass it. These are wired in
 
 | When | Script | Effect |
 |---|---|---|
-| Session start | `link-skills.sh`, `harness-status.sh` | Project skills are linked for Claude Code; goal, current feature and git state are injected into the agent's context (the BOOT happens by itself) |
+| Session start | `link-skills.sh`, `harness-status.sh` | Project skills are linked for Claude Code; goal, current feature and git state are injected into the agent's context (the BOOT happens by itself); when the disk runs low, what could be freed (`disk.py`) |
 | Session start | `hooks/other-sessions.py` | Another session wrote from this folder in the last 15 min and hasn't ended → a warning: the late one works in its own worktree (`AGENTS.md` §5) |
 | Session end | `hooks/other-sessions.py end` | Records the session as ended (`harness/.sessions-ended`, git-ignored), so the next one doesn't take it for parallel work |
 | Before each Bash command | `hooks/guard-bash.py` | **Refuses** force-push, `reset --hard`, `clean -f`, `branch -D`, `rm -rf` (except build/cache dirs); **asks** before migrations, `DROP`/`TRUNCATE`, deploys |
