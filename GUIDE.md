@@ -181,7 +181,9 @@ with one item at a time, and review the branch before merging.
 ## 8. Your weekly five minutes
 
 Open the dashboard (`./harness/scripts/dashboard.py --open`, or ask for it):
-backlog, milestones, the metric's trend, blockers and decisions on one page.
+what waits on you first (open questions, and open decisions if the project
+keeps them), then backlog, milestones, the metric's trend, blockers and
+decisions on one page, with links to the pages published for the project.
 
 - Did the metric in `harness/GOAL.md` move? Two sessions without progress →
   say *"we're stalling"*: the agent will propose a different approach.

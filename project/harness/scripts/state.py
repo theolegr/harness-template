@@ -2,8 +2,9 @@
 """state.py — the project's state as one JSON object.
 
 Reads the harness files (GOAL, STATE, FEATURES, FEATURES-DONE, EVAL, PLAN,
-DECISIONS), git and the loop's runtime files, and prints what they say. It
-never writes anything: the files stay the source of truth, this is a view.
+DECISIONS, ARTIFACTS, and OPEN-DECISIONS when the project keeps one), git and
+the loop's runtime files, and prints what they say. It never writes anything:
+the files stay the source of truth, this is a view.
 
   ./harness/scripts/state.py            # JSON on stdout (for agents and scripts)
 
@@ -29,6 +30,9 @@ RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harn
 REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/FEATURES.json",
             "harness/EVAL.md", "harness/PLAN.md", "harness/DECISIONS.md", "harness/guide/BOOT.md"]
 PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
+QREF = re.compile(r"\bQ\d+\b")   # an open question of STATE.md (Q1, Q2…), cited in a blocked item's reason
+DID = re.compile(r"[A-Z][A-Z0-9]*-\d+")   # an id: F-003, OD-04
+MDLINK = re.compile(r"\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)")   # the URL may hold (balanced) parentheses
 
 
 # ── Markdown helpers ──
@@ -84,6 +88,28 @@ def bullets(text):
         if m and filled(m.group(1)):
             out.append(m.group(1).strip())
     return out
+
+
+def header(text):
+    """Lower-cased header cells of the first Markdown table in text."""
+    for l in text.splitlines():
+        if l.strip().startswith("|"):
+            return [c.strip().lower() for c in l.strip().strip("|").split("|")]
+    return []
+
+
+def column(head, *names, default=None):
+    """Index of the first header cell containing one of names, else default."""
+    return next((i for i, h in enumerate(head) if any(n in h for n in names)), default)
+
+
+def cell(row, i):
+    return row[i] if i is not None and i < len(row) else ""
+
+
+def mentions(text, ids):
+    """The ids that text cites as whole words, in the order of ids."""
+    return [i for i in ids if re.search(rf"(?<![\w-]){re.escape(i)}(?![\w-])", text or "")]
 
 
 def table(text):
@@ -218,6 +244,67 @@ def decisions():
     return out[:6]
 
 
+def open_decisions():
+    """harness/OPEN-DECISIONS.md, when the project keeps one: decisions only the user can make, each a
+    `## <ID> — <title>` section, optionally summed up first in a table (ID | Topic | Blocks | Default)."""
+    md = re.sub(r"<!--.*?-->", "", read("harness/OPEN-DECISIONS.md"), flags=re.S)
+    intro = re.split(r"^## ", md, maxsplit=1, flags=re.M)[0]
+    head = header(intro)
+    title, blocks, default = column(head, "topic", "title", "decision", "question"), column(head, "block"), \
+        column(head, "default")
+    out = {}
+    for r in table(intro):
+        if DID.fullmatch(r[0]):
+            out[r[0]] = {"id": r[0], "title": filled(cell(r, title)), "blocks": filled(cell(r, blocks)),
+                         "default": filled(cell(r, default)), "body": ""}
+    for m in re.finditer(r"^## (\S+)\s+[—–-]\s+(.+?)\s*$(.*?)(?=^## |\Z)", md, flags=re.M | re.S):
+        if not DID.fullmatch(m.group(1)) or not filled(m.group(2)):
+            continue
+        d = out.setdefault(m.group(1), {"id": m.group(1), "title": None, "blocks": None, "default": None})
+        d["title"] = d["title"] or m.group(2)
+        d["body"] = re.sub(r"\n-{3,}\s*$", "", m.group(3)).strip()
+    return list(out.values())
+
+
+def waiting(st, b, decisions):
+    """What waits on the user: STATE.md's open questions and the open decisions, each with what it holds up —
+    the blocked items that cite it, the milestones whose definition of done names it — and their links."""
+    open_items = b["in_progress"] + b["todo"] + b["blocked"]
+    ods = [d["id"] for d in decisions]
+    questions = []
+    for q in st["open_questions"]:
+        m = re.match(r"\*\*(Q\d+)\*\*\s*(?:[—–:-]\s*)?(.*)", q, flags=re.S)
+        qid, text = (m.group(1), m.group(2)) if m else (None, q)
+        questions.append({"id": qid, "text": text, "decisions": mentions(text, ods),
+                          "blocks": [f["id"] for f in b["blocked"] if qid and qid in QREF.findall(f.get("blocked") or "")]})
+    for d in decisions:
+        d["questions"] = [q["id"] for q in questions if q["id"] and d["id"] in q["decisions"]]
+        d["blocks_items"] = [f["id"] for f in open_items
+                             if mentions(d["blocks"], [f["id"]]) or mentions(f.get("blocked"), [d["id"]])]
+        d["milestones"] = [m["name"] for m in b["milestones"]
+                           if not (m["total"] and m["done"] == m["total"])   # a complete one waits on nothing
+                           and mentions(m["definition_of_done"], [d["id"]])]
+    return {"questions": questions, "decisions": decisions}
+
+
+def artifacts():
+    """harness/ARTIFACTS.md: the pages published outside the repo, in the file's order (newest first)."""
+    md = read("harness/ARTIFACTS.md")
+    head = header(md)
+    date, page, what, status = (column(head, "updated", "date", default=0), column(head, "page", default=1),
+                                column(head, "what", default=2), column(head, "status", default=3))
+    out = []
+    for r in table(md):
+        link = MDLINK.search(cell(r, page))
+        url = link.group(2) if link else (re.findall(r"https?://[^\s<>|]+", cell(r, page)) or [""])[0]
+        name = link.group(1) if link else cell(r, page).replace(url, "").strip(" <>—-") or url
+        if not filled(name) or not filled(url):
+            continue
+        out.append({"date": filled(cell(r, date)), "title": name, "url": url, "what": filled(cell(r, what)),
+                    "archived": "archived" in cell(r, status).lower()})
+    return out
+
+
 def git():
     def run(*args):
         r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
@@ -273,10 +360,12 @@ def collect():
     missing = [f for f in REQUIRED if not (ROOT / f).exists()]
     if missing:
         warnings.append("missing: " + ", ".join(missing))
+    st = state()
     return {"project": b["project"] or ROOT.name,
             "generated": datetime.datetime.now().isoformat(timespec="seconds"),
-            "goal": goal(), "state": state(), "backlog": b, "eval": evals(), "plan": plan(),
-            "decisions": decisions(), "git": git(), "checks": checks(), "warnings": warnings}
+            "goal": goal(), "state": st, "backlog": b, "eval": evals(), "plan": plan(),
+            "decisions": decisions(), "waiting": waiting(st, b, open_decisions()), "artifacts": artifacts(),
+            "git": git(), "checks": checks(), "warnings": warnings}
 
 
 if __name__ == "__main__":

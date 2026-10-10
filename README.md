@@ -142,7 +142,8 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `PLAN.md` | Active plan (separate from execution) |
 | `DECISIONS.md` | Decision log (ADR-lite), in-repo |
 | `DESIGN.md` | Visual direction and the values to build UI with (brief, tokens, components, layout per size); `no UI` for a CLI or an API |
-| `ARTIFACTS.md` | Links to the pages published outside the repo (design canvases, diagrams, shared mockups), current or archived |
+| `ARTIFACTS.md` | Links to the pages published outside the repo (design canvases, diagrams, shared mockups), current or archived; the dashboard links them under the goal |
+| `OPEN-DECISIONS.md` | *Optional, not created.* Decisions only you can make, when a project keeps many of them apart from the open questions (e.g. after a design phase): a `## OD-01 — <topic>` section each, optionally summed up in a table `ID \| Topic \| Blocks \| Default` above them. The dashboard shows them next to the open questions |
 
 ### How we work — `harness/guide/` (changes rarely)
 
@@ -160,7 +161,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | File | Role |
 |---|---|
 | `harness-status.sh` | **Show** state, don't describe it |
-| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, the backlog as one ordered list (details fold out; a blocked item shows the numbered open question it waits on), metric and score trend, state and open questions, decisions, commits. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
+| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, what waits on you (the open questions and, when kept, `OPEN-DECISIONS.md`, each linked to the items and milestones it holds up), the backlog as one ordered list (details fold out; a blocked item links to the numbered open question it waits on), metric and score trend, state, decisions, commits; the published pages (`ARTIFACTS.md`) one click away under the goal. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
 | `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
 | `loop.sh` | Outer loop engine with enforced maker/checker split |
@@ -250,10 +251,11 @@ overhead. See `EVAL.md` → "future-proofing test".
 
 ```bash
 python3 tests/test_guard_bash.py   # the Bash guard: what it refuses, asks, lets through
+python3 tests/test_dashboard.py    # state.py + dashboard.py: what waits on you, published pages, links
 bash tests/smoke-install.sh        # install on a throwaway project, run its scripts, --update it
 ```
 
-No dependencies beyond `git`, `bash` and `python3`. CI runs both on Linux and macOS.
+No dependencies beyond `git`, `bash` and `python3`. CI runs all three on Linux and macOS.
 
 ## Credits
 

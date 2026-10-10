@@ -321,3 +321,15 @@ for little more than `harness-status.sh`).
 - Cut items no longer count in the backlog total (they're neither done nor left).
 - Comes with `init-harness.sh --update`, so projects already set up get it
   without losing their data.
+- 2026-10-08, from the first real project (11 open questions, 9 open decisions in
+  its own `OPEN-DECISIONS.md`, 5 published pages): what waits on the user moved
+  from a fold at the bottom of the State panel to a card under the overview,
+  cross-linked with the backlog (a blocked item's `Qn` ↔ its question; an open
+  decision → its questions, items and milestones). `OPEN-DECISIONS.md` is read
+  when a project keeps one, still not shipped (the open questions stay the
+  standard). `ARTIFACTS.md` pages are linked under the goal; URLs and Markdown
+  links in the harness files are clickable. Tests: `tests/test_dashboard.py`.
+  A first card, at the top of the page, was removed on 2026-10-05 (80772ce):
+  it took the top and repeated the backlog and the State panel. This one sits
+  under the overview and the questions left the State panel, so each shows
+  once; with 11 questions and 9 decisions, the fold at the bottom hid them.

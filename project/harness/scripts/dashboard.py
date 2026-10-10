@@ -26,11 +26,12 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True   # no __pycache__ left in harness/scripts/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from state import ROOT, collect  # noqa: E402
+from state import QREF, ROOT, collect  # noqa: E402
 
 OUT = ROOT / "harness" / "dashboard.html"
 RELOAD = 30   # seconds: an open tab picks up a rewrite (the Stop hook's, --watch's) on its own
-QREF = re.compile(r"\bQ\d+\b")   # an open question of STATE.md (Q1, Q2…), cited in a blocked item's reason
+# a Markdown link, an autolink, a bare URL — http(s) only
+URL = re.compile(r"\[([^\]\n]+)\]\((https?://(?:[^\s()]|\([^\s()]*\))+)\)|<(https?://[^\s>]+)>|(https?://[^\s<>\[\]`\"']+)")
 
 
 # ── Small helpers ──
@@ -39,11 +40,31 @@ def esc(s):
     return html.escape("" if s is None else str(s))
 
 
+def link(url, text, attrs=""):
+    """An http(s) link that opens in a new tab; anything else stays text."""
+    if not re.match(r"https?://", url or ""):
+        return text
+    return f'<a href="{esc(url)}" target="_blank" rel="noopener"{attrs}>{text}</a>'
+
+
 def inline(s):
-    """Escape, then the bits of Markdown the harness files use: `code`, **bold** and ~~struck~~."""
-    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", esc(s))
+    """Escape, then the bits of Markdown the harness files use: `code`, **bold**, ~~struck~~ and links."""
+    links = []
+
+    def keep(m):   # set aside while the rest is escaped, put back at the end
+        url = m.group(2) or m.group(3) or m.group(4)
+        tail = ""
+        if m.group(4):   # a bare URL leaves the sentence its punctuation, **, ~~ and closing parenthesis
+            while url and (url[-1] in ".,;:!?*~" or url[-1] == ")" and url.count(")") > url.count("(")):
+                url = url[:-1]
+            tail = m.group(4)[len(url):]
+        links.append(link(url, esc(m.group(1) or url)))
+        return f"\0{len(links) - 1}\0{tail}"
+
+    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", esc(URL.sub(keep, "" if s is None else str(s).replace("\0", ""))))
     s = re.sub(r"~~(.+?)~~", r"<s>\1</s>", s)
-    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    return re.sub(r"\0(\d+)\0", lambda m: links[int(m.group(1))], s)
 
 
 def ago(iso):
@@ -97,10 +118,15 @@ def fold(key, title, body, n=None, opened=False):
             f'<summary>{title}{count}{chev()}</summary><div class="fold-body">{body}</div></details>')
 
 
+def short(name):
+    """A milestone's short name: "M1" of "M1 — First release"."""
+    return (name or "").partition(" — ")[0][:12]
+
+
 def qchip(q, open_qs):
     """A Q<n> cited by a blocked item: red if it's an open question, grey if not (answered, or not a number)."""
     if q in open_qs:
-        return f'<span class="chip q" title="waits on open question {q} (STATE.md)">{q}</span>'
+        return f'<a class="chip q" href="#q-{q}" title="waits on open question {q} (STATE.md)">{q}</a>'
     return f'<span class="chip q unknown" title="{q} is not among the open questions — answered?">{q}?</span>'
 
 
@@ -127,7 +153,7 @@ def item(f, mark, ms_of, open_qs=frozenset()):
     facts.append(("Type", esc(" · ".join([kind] + dates))))
     body = "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in facts)
     status = f.get("status", "todo")
-    return (f'<details class="item {esc(status)}" data-key="{esc(fid)}"><summary>'
+    return (f'<details class="item {esc(status)}" id="item-{esc(fid)}" data-key="{esc(fid)}"><summary>'
             f'<span class="mark">{mark}</span>'
             f'<span class="line">{dot(kind)}<span class="id">{esc(fid)}</span> {inline(f.get("name"))}</span>'
             f'<span class="tags">{tags}</span>{chev()}</summary>'
@@ -155,6 +181,89 @@ def milestone(m):
             f'<span class="segs" role="img" aria-label="{m["done"]} of {m["total"]} done">{segs}</span>'
             f'<span class="ms-left">{foot}</span></summary>'
             f'<div class="ms-dod"><span class="label">Definition of done</span>{dod}</div></details>')
+
+
+# ── What waits on the user: open questions (STATE.md), open decisions (OPEN-DECISIONS.md, when kept) ──
+
+def ref(kind, rid, what=None):
+    """A link to a row of the page — an item, a question, a decision — and what it is."""
+    return (f'<a class="id" href="#{kind}-{esc(rid)}">{esc(rid)}</a>'
+            + (f" {inline(what)}" if what else ""))
+
+
+def prose(md):
+    """A section's Markdown, plainly: paragraphs, and list items indented as deep as they're nested."""
+    blocks = []   # [depth, text] for a list item, [None, text] for a paragraph
+    for line in md.splitlines():
+        m = re.match(r"(\s*)(?:[-*]|\d+\.)\s+(.*)", line)
+        if m:
+            blocks.append([len(m.group(1).expandtabs(4)) // 2, m.group(2)])
+        elif line.strip() and blocks and (line[0].isspace() and blocks[-1][0] is not None
+                                          or blocks[-1][0] is None and blocks[-1][1]):
+            blocks[-1][1] += " " + line.strip()   # a wrapped line continues its item or paragraph
+        else:
+            blocks.append([None, line.strip()])   # a blank line ends a paragraph
+    out = "".join(f'<li style="margin-left:{d * 16}px">{inline(t)}</li>' if d is not None else f"<p>{inline(t)}</p>"
+                  for d, t in blocks if t)
+    # consecutive items make one list
+    return re.sub(r"((?:<li\b.*?</li>)+)", r'<ul class="list">\1</ul>', out)
+
+
+def open_row(anchor, mark, line, tags="", facts=(), more=""):
+    """One question or decision: the gist always visible, the rest folds out (like a backlog row)."""
+    body = "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in facts if v)
+    return (f'<details class="item open-row" id="{esc(anchor)}" data-key="{esc(anchor)}"><summary>'
+            f'<span class="mark">{esc(mark)}</span><span class="line">{line}</span>'
+            f'<span class="tags">{tags}</span>{chev()}</summary>'
+            + (f'<dl class="facts">{body}</dl>' if body else "")
+            + (f'<div class="prose-body">{more}</div>' if more else "") + "</details>")
+
+
+def waiting(w, b):
+    qs, ds = w["questions"], w["decisions"]
+    if not qs and not ds:
+        return ""
+    names = {f.get("id"): f.get("name") for f in b["in_progress"] + b["todo"] + b["blocked"]}
+    titles = {d["id"]: d["title"] for d in ds}
+    blocks = lambda ids: "".join(f'<a class="chip q" href="#item-{esc(i)}" title="blocks {esc(i)}: '
+                                 f'{esc(names.get(i))}">{esc(i)}</a>' for i in ids)
+    q_rows = "".join(open_row(
+        f"q-{q['id'] or n}", q["id"] or "•", inline(q["text"]), blocks(q["blocks"]),
+        [("Blocks", "<br>".join(ref("item", i, names.get(i)) for i in q["blocks"])),
+         ("Decisions", "<br>".join(ref("decision", d, titles.get(d)) for d in q["decisions"]))])
+        for n, q in enumerate(qs, 1))
+    d_rows = "".join(open_row(
+        f"decision-{d['id']}", d["id"],
+        f'<strong>{inline(d["title"] or d["id"])}</strong>'
+        + (f' <span class="muted">· blocks {inline(d["blocks"])}</span>' if d["blocks"] else ""),
+        "".join(f'<span class="chip ms">{esc(short(m))}</span>' for m in d["milestones"]) + blocks(d["blocks_items"]),
+        [("Default", inline(d["default"])), ("Asked in", " ".join(ref("q", q) for q in d["questions"])),
+         ("Blocks", "<br>".join(ref("item", i, names.get(i)) for i in d["blocks_items"]))],
+        prose(d["body"])) for d in ds)
+    cols = []
+    for title, src, rows, n in (("Open questions", "STATE.md", q_rows, len(qs)),
+                                ("Open decisions", "OPEN-DECISIONS.md", d_rows, len(ds))):
+        if rows:
+            cols.append(f'<div><h3 class="group">{title} <span class="count">{n}</span> '
+                        f'<code class="src">{src}</code></h3><div class="items">{rows}</div></div>')
+    return (f'<section class="card waiting" id="waiting"><div class="backlog-head"><h2>Waiting on you</h2>'
+            f'<p class="sub">Only you can settle these — answer in a session, the agent records it.</p></div>'
+            f'<div class="waiting-cols">{"".join(cols)}</div></section>')
+
+
+def pages(arts):
+    """Quick links to the pages published outside the repo (ARTIFACTS.md); archived ones fold away."""
+    if not arts:
+        return ""
+    def page(a):
+        tip = re.sub(r"[`*]", "", " — ".join(x for x in (a["date"], a["what"]) if x))
+        return link(a["url"], f'{esc(a["title"])}<span class="ext" aria-hidden="true">↗</span>',
+                    f' class="page" title="{esc(tip)}"')
+    old = [page(a) for a in arts if a["archived"]]
+    more = (f'<details class="archived" data-key="pages-archived"><summary>{len(old)} archived{chev()}</summary>'
+            f'<div class="pages-old">{"".join(old)}</div></details>' if old else "")
+    return (f'<nav class="pages" aria-label="Published pages"><span class="label">Pages</span>'
+            f'{"".join(page(a) for a in arts if not a["archived"])}{more}</nav>')
 
 
 # ── Score chart: one series, so no legend; the title names it ──
@@ -229,6 +338,9 @@ def render(s, refresh=RELOAD):
         meta.append(f'<span>Branch <code>{esc(gt["branch"])}</code></span>')
     last_pass = ago(ck["last_pass"])
     meta.append(f'<span>Last green check <strong>{esc(last_pass or "never")}</strong></span>')
+    n_waiting = len(s["waiting"]["questions"]) + len(s["waiting"]["decisions"])
+    if n_waiting:
+        meta.append(f'<a class="meta-link" href="#waiting">Waiting on you <strong>{n_waiting}</strong></a>')
     goal = (f'<p class="goal">{inline(g["target"])}</p>' if g["target"]
             else empty("No target yet — set it in `harness/GOAL.md` (or run `/harness-init`)."))
     warn = (f'<div class="warn" role="status"><strong>⚠ Needs attention</strong>{ul(map(inline, s["warnings"]))}</div>'
@@ -264,9 +376,8 @@ def render(s, refresh=RELOAD):
     # backlog: one ordered list — what's next (in the order /ship takes it), then what's done, greyed
     ms_of = {}
     for m in b["milestones"]:
-        short = (m["name"] or "").partition(" — ")[0][:12]
         for i in m["items"]:
-            ms_of.setdefault(i["id"], []).append(short)
+            ms_of.setdefault(i["id"], []).append(short(m["name"]))
     groups = []
     if b["in_progress"]:
         groups.append(("In progress", b["in_progress"], lambda i: '▶<span class="sr"> in progress</span>'))
@@ -309,9 +420,6 @@ def render(s, refresh=RELOAD):
         state.append("<h3>Stalls</h3>" + ul(map(inline, st["stalls"])))
     if st["next"]:
         state.append(fold("next", "Next steps", ul(map(inline, st["next"]), "list ordered"), len(st["next"])))
-    if st["open_questions"]:
-        state.append(fold("questions", "Open questions", ul(map(inline, st["open_questions"])),
-                          len(st["open_questions"])))
     state_card = f'<section class="card"><h2>State</h2>{"".join(state)}</section>'
 
     act = []
@@ -345,9 +453,10 @@ def render(s, refresh=RELOAD):
 <style>{CSS}</style></head>
 <body><main class="wrap">
 <header class="top"><div class="head-row"><h1>{esc(s["project"])}</h1><div class="meta">{"".join(meta)}</div></div>
-{goal}</header>
+{goal}{pages(s["artifacts"])}</header>
 {warn}
 <div class="overview">{progress}{nxt_card}{ms_card}</div>
+{waiting(s["waiting"], b)}
 <div class="layout">{backlog}<aside class="side">{goal_card}{state_card}{activity_card}</aside></div>
 <footer>Generated {esc(s["generated"].replace("T", " ")[:16])} · rewritten at the end of each agent turn, reloads
 every {refresh} s · by hand: <code>./harness/scripts/dashboard.py</code> · as JSON: <code>./harness/scripts/state.py</code></footer>
@@ -358,10 +467,10 @@ every {refresh} s · by hand: <code>./harness/scripts/dashboard.py</code> · as 
 CSS = """
 :root{color-scheme:light;--page:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;
 --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);--accent:#2a78d6;--track:#cde2fb;--wash:#f0efec;
---good:#0ca30c;--warning:#fab219;--critical:#d03b3b;--t-feature:#2a78d6;--t-bug:#eb6834;--t-debt:#1baf7a}
+--link:#1d66bd;--good:#0ca30c;--warning:#fab219;--critical:#d03b3b;--t-feature:#2a78d6;--t-bug:#eb6834;--t-debt:#1baf7a}
 @media (prefers-color-scheme:dark){:root{color-scheme:dark;--page:#0d0d0d;--surface:#1a1a19;--ink:#fff;
 --ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--accent:#3987e5;
---track:#0d366b;--wash:#262624;--t-feature:#3987e5;--t-bug:#d95926;--t-debt:#199e70}}
+--track:#0d366b;--wash:#262624;--link:#5a9cf0;--t-feature:#3987e5;--t-bug:#d95926;--t-debt:#199e70}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 48px;display:flex;flex-direction:column;gap:16px}
@@ -372,6 +481,10 @@ p{margin:0}
 code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--wash);padding:1px 5px;border-radius:4px;
 overflow-wrap:anywhere}
 s{color:var(--muted)}
+a{color:var(--link);text-decoration-thickness:1px;text-underline-offset:2px;overflow-wrap:anywhere}
+a.chip,a.id,a.page,.meta-link{text-decoration:none}
+a.chip:hover,a.id:hover{text-decoration:underline}
+a.id{color:var(--link)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em;
 margin:0 0 8px}
@@ -391,6 +504,18 @@ margin:0 0 8px}
 color:var(--ink);background:var(--surface)}
 .pill.good{border-color:var(--good)}.pill.warning{border-color:var(--warning)}.pill.critical{border-color:var(--critical)}
 .goal{font-size:15px;margin-top:8px;max-width:80ch;color:var(--ink-2)}
+.meta-link{color:var(--ink-2)}
+.meta-link:hover strong{text-decoration:underline}
+.pages{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:12px;font-size:13px}
+.pages>.label{margin:0 4px 0 0}
+.page{display:inline-flex;align-items:baseline;gap:5px;padding:2px 10px;border:1px solid var(--border);
+border-radius:999px;background:var(--surface);color:var(--ink);overflow-wrap:normal}
+.page:hover{border-color:var(--accent)}
+.ext{color:var(--muted);font-size:11px}
+.archived>summary{display:inline-flex;align-items:center;gap:4px;padding:2px 4px;color:var(--ink-2)}
+.archived[open]{flex-basis:100%}
+.pages-old{display:flex;flex-wrap:wrap;gap:6px 8px;padding-top:6px}
+.pages-old .page{color:var(--ink-2)}
 .warn{border:1px solid var(--border);border-left:3px solid var(--warning);background:var(--surface);border-radius:10px;
 padding:8px 14px;font-size:13px}
 .warn ul{margin:2px 0 0;padding-left:18px}
@@ -487,6 +612,20 @@ font-size:13px}
 .facts dt{color:var(--muted)}.facts dd{margin:0;color:var(--ink-2)}
 @media (max-width:560px){.facts{padding-left:38px;grid-template-columns:minmax(0,1fr)}.facts dd{margin-bottom:6px}}
 
+/* waiting on you: questions and decisions, side by side when there's room */
+.waiting .backlog-head .sub{margin:0}
+.waiting-cols{display:grid;gap:0 28px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1100px){.waiting-cols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
+.waiting .group .src{font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
+.open-row>summary{grid-template-columns:48px minmax(0,1fr) auto 14px}
+.open-row .mark{text-align:left;color:var(--ink-2);white-space:nowrap}
+.open-row .facts{padding-left:64px}
+.prose-body{padding:0 6px 12px 64px;font-size:13px;color:var(--ink-2)}
+.prose-body p+p,.prose-body p+ul,.prose-body ul+p{margin-top:6px}
+.item:target>summary{background:var(--wash);box-shadow:inset 3px 0 0 var(--accent)}
+@media (max-width:560px){.open-row>summary{grid-template-columns:44px minmax(0,1fr) 14px}
+.open-row .facts,.prose-body{padding-left:6px}}
+
 /* side */
 .metrics{list-style:none;margin:0;padding:0}
 .metrics li{padding:8px 0;border-top:1px solid var(--grid);display:flex;flex-direction:column;gap:2px}
@@ -565,6 +704,12 @@ document.querySelectorAll('.chart-wrap').forEach(w => {
     tip.hidden = false;
   });
   hit.addEventListener('mouseleave', hide);
+});
+
+// a link to a row of the page (Q3 → its question, F-010 → its item) unfolds it
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#"]'), t = a && document.getElementById(decodeURIComponent(a.hash.slice(1)));
+  if (t && t.tagName === 'DETAILS') t.open = true;
 });
 
 try { const y = Number(sessionStorage.getItem('harness-scroll')); if (y) window.scrollTo(0, y); } catch (e) {}

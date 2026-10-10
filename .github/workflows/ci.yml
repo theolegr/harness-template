@@ -32,5 +32,8 @@ jobs:
       - name: Guard tests
         run: python3 tests/test_guard_bash.py
 
+      - name: Dashboard tests
+        run: python3 tests/test_dashboard.py
+
       - name: Install + update on a throwaway project
         run: bash tests/smoke-install.sh

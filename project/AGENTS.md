@@ -99,8 +99,8 @@ are the way they are.
     you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, as
     `**Qn** — …`. Numbers are never reused: a new question takes the one after the section's
     `> Last number: Qn` line (a quote, not a bullet; add it with the first question, update it each time); an answered question
-    leaves the list. The dashboard shows blocked items in the backlog with their `Qn`, and the open
-    questions in the State panel.
+    leaves the list. The dashboard lists the open questions under “Waiting on you”, each linked to the
+    items it blocks, and a blocked item's `Qn` links back to its question.
 
 ## 6. Session boot sequence
 
