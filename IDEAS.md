@@ -387,3 +387,14 @@ for little more than `harness-status.sh`).
   it took the top and repeated the backlog and the State panel. This one sits
   under the overview and the questions left the State panel, so each shows
   once; with 11 questions and 9 decisions, the fold at the bottom hid them.
+- 2026-11-04, a lighter page, more to see than to read: the backlog split by
+  status in one bar (done, in progress, blocked, to do); each goal metric
+  against its target as a meter (when both are numbers and more is better);
+  the latest score up front with its change, the chart drawn at the width it's
+  shown at (its labels were 6 px). Less twice: "Working on" hidden when it
+  names the item in progress, the last session moved there from the State
+  panel, a milestone's left ids folded out with their names, a shipped item's
+  priority folded out, the Done list cut to the 3 newest (Up next to 8), the
+  rest one click away. Drawn icons instead of ▶ ⛔ ✓ emoji. `state.py` read
+  only the first decision of `DECISIONS.md` (its title swallowed the rest):
+  fixed.

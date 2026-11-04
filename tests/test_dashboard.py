@@ -227,6 +227,51 @@ def main():
     check("no card, no header link, no pages strip",
           'id="waiting"' not in page and "Waiting on you" not in page and 'class="pages"' not in page)
 
+    print("── the overview: a bar by status, metrics against their target, long lists folded")
+    done = [{"id": f"F-1{n:02}", "name": f"Shipped {n}", "type": "feature", "status": "done", "priority": "p2",
+             "closed": f"2026-10-{n:02}"} for n in range(1, 7)]
+    feats = {"project": "Demo", "features": [
+        {"id": "F-200", "name": "Checkout", "type": "feature", "status": "in_progress", "priority": "p0"},
+        {"id": "F-201", "name": "Portal", "type": "feature", "status": "blocked", "priority": "p1", "blocked": "A1"},
+        {"id": "F-202", "name": "Export", "type": "feature", "status": "todo", "priority": "p1"},
+        {"id": "F-203", "name": "Digest", "type": "feature", "status": "todo", "priority": "p2"}],
+        "milestones": [{"name": "M2 — Launch", "definition_of_done": "Paid.",
+                        "features": ["F-101", "F-200", "F-201", "F-202"]}]}
+    s = project({"harness/FEATURES.json": feats, "harness/FEATURES-DONE.json": {"features": done},
+                 "harness/STATE.md": "## Now\n- **Health**: 🟡 on track\n- **Working on**: F-200 — Checkout\n"
+                                     "- **Last session**: 2026-11-03 — checkout started\n",
+                 "harness/GOAL.md": "## Success metric\n\n| Metric | Current | Target | Measured by |\n|---|---|---|---|\n"
+                                    "| Activation | 34% | 40% | x |\n| Teams | 1,200 | 1,000 | y |\n"
+                                    "| p95 latency | 620ms | <500ms | z |\n| Revenue | — | $1K | w |\n",
+                 "harness/EVAL.md": "## Score history\n\n| Date | Commit | Score | Notes |\n|---|---|---|---|\n"
+                                    "| 2026-10-04 | a1 | 12 | |\n| 2026-10-22 | b2 | 31 | |\n| 2026-11-02 | c3 | 34 | |\n",
+                 "harness/DECISIONS.md": "# DECISIONS\n\n## 2026-10-20 — PNG reports\n\n**Status**: accepted\n\n"
+                                         "## 2026-10-09 — Postgres\n\n**Status**: superseded by 2026-10-20\n\n"
+                                         "## YYYY-MM-DD — <Decision title>\n"})
+    page = dashboard.render(s, refresh=0)
+    check("decisions: one per section, the title its own line", [(d["title"], d["status"]) for d in s["decisions"]]
+          == [("PNG reports", "accepted"), ("Postgres", "superseded by 2026-10-20")], s["decisions"])
+    check("backlog split by status, in a bar and its key",
+          'aria-label="Backlog: 6 done, 1 in progress, 1 blocked, 2 to do"' in page
+          and '<span class="seg done" style="flex:6 1 0"' in page and "<strong>2</strong> to do" in page)
+    check("health: the dot carries the color, the emoji is dropped",
+          '<span class="pill warning"><span class="sdot" aria-hidden="true"></span>Health <strong>on track</strong>' in page)
+    check("“Working on” naming the item in progress: not shown twice", ">Working on<" not in page)
+    check("the last session sits under what's in progress", '<span class="label">Last session</span>2026-11-03' in page)
+    check("a metric under its target: a meter, 85% full", 'aria-label="Activation: 34 of 40"' in page
+          and 'aria-valuenow="85"' in page)
+    check("a metric past its target: full, green, ticked", 'class="meter met"' in page and "target reached" in page)
+    check("a lower-is-better target, a metric not measured yet: no meter",
+          'aria-label="p95 latency' not in page and 'aria-label="Revenue' not in page)
+    check("the latest score, and how it moved", '<span class="stat">34</span><span class="delta">+3 since Oct 22</span>'
+          in page)
+    check("Done: the 3 newest shown, the rest folded", '3 more shipped' in page and 'data-key="more:Done"' in page
+          and page.index('id="item-F-104"') < page.index('data-key="more:Done"') < page.index('id="item-F-103"'))
+    check("a shipped item's priority folds out, an open one's shows", page.count('class="prio"') == 4
+          and "feature · P2 · closed 2026-10-06" in page)
+    check("milestone: “3 left · 1 blocked”, the ids folded out with their names",
+          '3 left · <span class="st-blocked">' in page and 'href="#item-F-202">F-202</a> Export' in page)
+
     print(f"\n{'all passed' if not failed else f'{failed} failed'}")
     sys.exit(1 if failed else 0)
 
