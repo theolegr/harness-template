@@ -39,7 +39,7 @@ text when the answer is free-form. After each round, restate in 2–3 lines what
 you understood before moving on.
 
 Every question can be skipped. A skipped answer keeps its `<placeholder>` and is
-listed at the end as an open question.
+listed at the end as a question in `harness/WAITING.md`.
 
 **Skill suggestions.** After Round 2 (stack) and Round 4 (features), check
 `harness/guide/SKILLS.md`. If a skill clearly fits this project, suggest it in
@@ -106,7 +106,8 @@ No suggestion is the normal case. Install nothing during the interview.
 | Target, metric table, constraints, non-goals | `harness/GOAL.md` — the target replaces the `<the target, in one sentence>` line under `## Target` (`harness-status.sh` prints that line) |
 | Features | `harness/FEATURES.json` (keep the schema: id `F-001`…, type `feature`, name, status `todo`, priority, acceptance, files, notes) + the MVP milestone. Bugs and debt come later, as `B-…` / `D-…` via `feature.sh add` |
 | Phase, health 🟢, "Working on" = first p0 feature, "Next" = the next ones, today's date | `harness/STATE.md` |
-| Skipped answers | `harness/STATE.md` → Open questions, numbered `**Q1** — …` with a `> Last number: Qn` line (`AGENTS.md` §5, rule 10) |
+| Skipped answers | `harness/WAITING.md` → Questions, numbered `**Q1** — …`, and its `> Last numbers:` line (`AGENTS.md` §5, rule 10) |
+| What only the user can set up (accounts, API keys, a domain, access to a service) | `harness/WAITING.md` → Actions, `**A1** — … · Done when: …` |
 | Autonomy / voice changes | `harness/guide/SOUL.md` |
 | No user-facing UI (CLI, API, bot) | `harness/DESIGN.md` → Status `no UI`; otherwise leave it for the `design` skill |
 | Loop commands | `AGENTS.md` §3 (the `loop.sh` line) |
@@ -134,8 +135,8 @@ Rules while writing:
    failing tests only because nothing exists is expected — say so. Any other
    failure: fix it.
 3. Run `./harness/scripts/harness-status.sh` and show the output.
-4. Summarize for the user in a few lines: goal, metric, first feature, what was
-   skipped (open questions).
+4. Summarize for the user in a few lines: goal, metric, first feature, what
+   waits on them (`harness/WAITING.md`: the actions first, then the questions).
 5. Ask for the OK, then commit: `chore: initialise project harness`.
    Do not commit without the OK.
 6. Tell the user the next step, in one or two lines: say "ship the next one"

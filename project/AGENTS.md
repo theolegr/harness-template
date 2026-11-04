@@ -96,14 +96,16 @@ are the way they are.
    dependencies and builds): when the status shows `── DISK ──`, show the user what it lists and run only
    what they OK — an `rm -rf` outside the project is theirs to run (the guard refuses it). After removing
    a worktree, `./harness/scripts/disk.py` shows what it left outside its folder (an Xcode build).
-10. **What waits on the user is written down, never only in the chat.** An item that needs their info,
-    choice or OK → `feature.sh <id> blocked "waiting on <user>: <what>"` (the reason is kept apart, the
-    notes stay); if it waits on an open question, cite its number (`Q3`). Any other question or decision
-    you raised that's still open at the end of your turn → `harness/STATE.md` → Open questions, as
-    `**Qn** — …`. Numbers are never reused: a new question takes the one after the section's
-    `> Last number: Qn` line (a quote, not a bullet; add it with the first question, update it each time); an answered question
-    leaves the list. The dashboard lists the open questions under “Waiting on you”, each linked to the
-    items it blocks, and a blocked item's `Qn` links back to its question.
+10. **What waits on the user is written down, never only in the chat** — before your turn ends, in
+    `harness/WAITING.md`, one short line each, in two kinds: **`Qn` — a question** they answer in a
+    sentence (a choice: options inline, your recommendation first; a fact only they know; an OK) and
+    **`An` — an action** they must do themselves, outside the session (an account, a key, a payment, a
+    call, a draft to review), with `Done when:` what you'll check. A deadline → `By: YYYY-MM-DD`; nothing
+    blocked and no date → `## Later`. An item that waits on one → `feature.sh <id> blocked "waiting on
+    <user>: A2"` — cite the number, don't repeat the text. Numbers are never reused (`> Last numbers:`
+    line, updated each time). Settled → the line leaves the file: a choice → `DECISIONS.md`; a done
+    action, once you've checked it, unblocks its items (`feature.sh <id> todo`); an answer that asks them
+    to do something → a new action ("A4, from Q12"). The status and the dashboard show it all first.
 
 ## 6. Session boot sequence
 
@@ -116,6 +118,7 @@ Follow `harness/guide/BOOT.md` at the start of every session. It takes 30 second
 |---|---|
 | Who the agent is, autonomy boundaries | `harness/guide/SOUL.md` |
 | Current state / what's next | `harness/STATE.md` |
+| What waits on the user: questions (`Qn`), actions only they can do (`An`) | `harness/WAITING.md` (rule 10) |
 | Backlog: features, bugs, debt (work left) | `harness/FEATURES.json` — add / change status with `harness/scripts/feature.sh` |
 | Ship the next item, in a chat | `.claude/skills/ship/SKILL.md` (`/ship`) |
 | Review a change (read-only) | `.claude/agents/reviewer.md` |

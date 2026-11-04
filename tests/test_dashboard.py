@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for state.py and dashboard.py: what waits on the user, and the published pages.
+"""Tests for state.py and dashboard.py: what waits on the user (WAITING.md), and the published pages.
 
 Run: python3 tests/test_dashboard.py   (no dependencies; exit code 1 on failure)
 Each check reads a small project written to a temp folder, as state.py reads a real one.
@@ -19,17 +19,38 @@ sys.path.insert(0, str(ROOT / "project/harness/scripts"))
 import state  # noqa: E402
 import dashboard  # noqa: E402
 
+WAITING_MD = """# WAITING.md
+
+> Last numbers: Q9 · A3
+
+## Actions
+
+- **A2** — Paste the Stripe key into `.env` · Done when: `stripe whoami` answers · By: 2999-01-01
+  1. Developers → API keys
+  2. Copy the test key
+- **A3** — Call the accountant · By: 2000-01-01
+<!-- - **A9** — a commented-out example -->
+
+## Questions
+
+- **Q3** — Error copy to OK: “That didn't save.” (B-002)
+- **Q8** — Which domain: A) a.com B) b.com? See https://example.com/domains/ · Reco: A · Blocks: F-011
+- **Q9** — Gates M3; asked again in A2 · Owner: the user · see https://example.com/q9
+- An unnumbered one.
+
+## Later
+
+- **Q5** — A partnership, some day
+"""
+
 STATE_MD = """# STATE.md
 ## Now
 - **Health**: 🟢 fine
 ## Open questions
 
-> Last number: Q9
+> Last number: Q7
 
-- **Q3** — Error copy to OK: “That didn't save.” (B-002)
-- **Q8** — Which domain do we buy? See https://example.com/domains/. Blocks the launch.
-- **Q9** — OD-04 gates M3; also [the mockup](https://claude.ai/artifact/abc).
-- An unnumbered one about OD-04.
+- **Q7** — An old question, not moved yet (OD-04)
 - <question> → <who/what will answer it>
 """
 
@@ -37,14 +58,16 @@ FEATURES = {
     "project": "Demo",
     "features": [
         {"id": "F-010", "name": "Custom domain", "type": "feature", "status": "blocked", "priority": "p1",
-         "blocked": "waiting on the user: a domain name (Q8)"},
+         "blocked": "waiting on the user: a domain name (Q8), the key (A2), A1, A54 of the research, Q4"},
         {"id": "F-011", "name": "Export", "type": "feature", "status": "todo", "priority": "p1",
          "blocked": None},
+        {"id": "F-012", "name": "Payments", "type": "feature", "status": "blocked", "priority": "p1",
+         "blocked": "waiting on the user: A2"},
         {"id": "F-001", "name": "Shipped", "type": "feature", "status": "done", "priority": "p1"},
     ],
     "milestones": [
-        {"name": "M3 — Export", "definition_of_done": "OD-04 is decided first.", "features": []},
-        {"name": "M1 — Done", "definition_of_done": "OD-04 was mentioned once.", "features": ["F-001"]},
+        {"name": "M3 — Export", "definition_of_done": "Q9 and OD-04 are decided first.", "features": []},
+        {"name": "M1 — Done", "definition_of_done": "Q9 was mentioned once.", "features": ["F-001"]},
     ],
 }
 
@@ -66,10 +89,6 @@ OPEN_DECISIONS = """# OPEN-DECISIONS.md
 ## OD-04 — Where the data lives
 
 The tension, in a paragraph.
-
-## OD-12 — Only a section
-
-- no table row for this one
 """
 
 ARTIFACTS = """# ARTIFACTS.md
@@ -103,47 +122,79 @@ def project(files):
 
 
 def main():
-    print("── a project with open questions, OPEN-DECISIONS.md and ARTIFACTS.md")
-    s = project({"harness/STATE.md": STATE_MD, "harness/FEATURES.json": FEATURES,
-                 "harness/OPEN-DECISIONS.md": OPEN_DECISIONS, "harness/ARTIFACTS.md": ARTIFACTS})
-    qs, ds = s["waiting"]["questions"], s["waiting"]["decisions"]
-    check("open questions, placeholder left out", [q["id"] for q in qs] == ["Q3", "Q8", "Q9", None],
-          [q["id"] for q in qs])
-    check("Q8 blocks F-010 (cited in its reason)", qs[1]["blocks"] == ["F-010"], qs[1]["blocks"])
-    check("Q9 cites OD-04", qs[2]["decisions"] == ["OD-04"], qs[2]["decisions"])
-    check("decisions: table order, then sections", [d["id"] for d in ds] == ["OD-01", "OD-04", "OD-12"],
-          [d["id"] for d in ds])
-    od4 = ds[1]
-    check("OD-04: topic, blocks, default from the table",
-          (od4["title"], od4["blocks"], od4["default"]) == ("Where the data lives", "export (M3), F-011", "on the device"), od4)
-    check("OD-04: body from its section", od4["body"] == "The tension, in a paragraph.", od4["body"])
-    check("OD-04: asked in Q9 (an unnumbered question can't be cited)", od4["questions"] == ["Q9"],
-          od4["questions"])
-    check("OD-04: blocks open item F-011", od4["blocks_items"] == ["F-011"], od4["blocks_items"])
-    check("OD-04: milestone M3 (no items yet), not the complete M1", od4["milestones"] == ["M3 — Export"],
-          od4["milestones"])
-    check("OD-12: title from its heading", ds[2]["title"] == "Only a section", ds[2]["title"])
-    arts = s["artifacts"]
-    check("artifacts: placeholder row left out", [a["title"] for a in arts] == ["Research", "Bad", "Old canvas"],
-          [a["title"] for a in arts])
-    check("artifacts: archived read from Status", [a["archived"] for a in arts] == [False, False, True],
-          [a["archived"] for a in arts])
-    check("artifacts: url", arts[0]["url"] == "https://claude.ai/artifact/abc", arts[0]["url"])
+    print("── WAITING.md: actions, questions, later")
+    s = project({"harness/WAITING.md": WAITING_MD, "harness/FEATURES.json": FEATURES,
+                 "harness/STATE.md": "## Now\n- **Health**: 🟢 fine\n", "harness/ARTIFACTS.md": ARTIFACTS})
+    w = s["waiting"]
+    acts, qs = w["actions"], w["questions"]
+    check("actions: the overdue one first, the commented example left out", [r["id"] for r in acts] == ["A3", "A2"],
+          [r["id"] for r in acts])
+    check("questions: file order (no date, Q8 blocks the most first)", [r["id"] for r in qs] == ["Q8", "Q3", "Q9", None],
+          [r["id"] for r in qs])
+    check("later: kept apart", [r["id"] for r in w["later"]] == ["Q5"], w["later"])
+    a2 = acts[1]
+    check("A2: gist without its fields", a2["text"] == "Paste the Stripe key into `.env`", a2["text"])
+    check("A2: fields", a2["fields"] == [["Done when", "`stripe whoami` answers"], ["By", "2999-01-01"]], a2["fields"])
+    check("A2: steps kept as its body", a2["body"] == "1. Developers → API keys\n2. Copy the test key", a2["body"])
+    check("A2: due, not overdue", (a2["due"], a2["overdue"]) == ("2999-01-01", False), (a2["due"], a2["overdue"]))
+    check("A3: overdue, counted", acts[0]["overdue"] and w["overdue"] == 1, (acts[0], w["overdue"]))
+    check("A2 blocks the items whose reason cites it", a2["blocks"] == ["F-010", "F-012"], a2["blocks"])
+    q8 = qs[0]
+    check("Q8 blocks F-011 (its Blocks field) and F-010 (cited)", q8["blocks"] == ["F-011", "F-010"], q8["blocks"])
+    check("Q9: milestone M3, not the complete M1", qs[2]["milestones"] == ["M3 — Export"], qs[2]["milestones"])
+    check("Q9 cites A2", qs[2]["cites"] == ["A2"], qs[2]["cites"])
+    check("Q9: a field that isn't Blocks stays a field; a URL after · isn't one",
+          (qs[2]["fields"], qs[2]["text"]) == ([["Owner", "the user"]], "Gates M3; asked again in A2 · see https://example.com/q9"),
+          (qs[2]["fields"], qs[2]["text"]))
+    check("last numbers", w["last"] == {"Q": 9, "A": 3}, w["last"])
+    check("no warning: nothing left to move", state.waiting_warnings(w) == [], state.waiting_warnings(w))
 
     page = dashboard.render(s, refresh=0)
-    check("card “Waiting on you”, counted in the header",
-          'id="waiting"' in page and 'Waiting on you <strong>7</strong>' in page)
-    check("rows have anchors", all(f'id="{a}"' in page for a in ("q-Q8", "decision-OD-04", "item-F-010")))
-    check("a blocked item's Q8 links to the question", 'href="#q-Q8"' in page)
-    check("Q8 links to the item it blocks", 'href="#item-F-010"' in page)
-    check("OD-04 shows its milestone", '<span class="chip ms">M3</span>' in page)
-    check("open questions left the State panel", 'data-key="questions"' not in page)
+    check("card “Waiting on you”, 2 actions + 4 questions counted, 1 overdue, in the header",
+          'id="waiting"' in page and 'Waiting on you <strong>6</strong> · <strong class="late">1 overdue</strong>' in page)
+    check("two columns: Actions, then Questions", page.index(">Actions <") < page.index(">Questions <"))
+    check("rows have anchors", all(f'id="{a}"' in page for a in ("w-A2", "w-Q8", "w-questions-4", "w-Q5", "item-F-010")))
+    check("overdue shown on A3", '<span class="chip overdue" title="to settle by 2000-01-01">overdue · Jan 1</span>' in page)
+    check("later folded", 'data-key="later"' in page)
+    check("a blocked item links to the action it waits on", 'class="chip a" href="#w-A2"' in page)
+    check("… and to the question", 'class="chip q" href="#w-Q8"' in page)
+    check("A1 (given once, now settled): grey", 'class="chip a unknown"' in page and ">A1?<" in page)
+    check("A54 (past the last number: not ours): no chip", "A54?" not in page and 'href="#w-A54"' not in page)
+    check("Q4 (settled): grey", ">Q4?<" in page)
+    check("Q8 links to the items it blocks", 'href="#item-F-011"' in page)
+    check("A2's steps shown, numbered", '<ol class="list ordered"><li data-ol style="margin-left:0px">Developers → API keys'
+          '</li><li data-ol style="margin-left:0px">Copy the test key</li></ol>' in page)
+    check("Q9 links to A2", 'href="#w-A2">A2</a> <span class="muted">action</span>' in page)
     check("current page linked in the header", 'class="page" title="2026-10-08 — competitor review, draft"' in page)
     check("archived page folded", 'data-key="pages-archived"' in page and "Old canvas" in page)
     check("no javascript: link", "javascript:" not in page)
+    check("no dead link", 'href="#w-"' not in page)
+
+    print("── not moved yet: STATE.md's open questions, OPEN-DECISIONS.md")
+    s = project({"harness/STATE.md": STATE_MD, "harness/FEATURES.json": FEATURES,
+                 "harness/OPEN-DECISIONS.md": OPEN_DECISIONS})
+    qs = s["waiting"]["questions"]
+    check("read as questions, placeholder left out", [q["id"] for q in qs] == ["OD-04", "Q7", "OD-01"],
+          [q["id"] for q in qs])
+    od4 = qs[0]
+    check("OD-04: topic, default, blocks from the table", (od4["text"], od4["fields"]) ==
+          ("Where the data lives", [["Default", "on the device"], ["Blocks", "export (M3), F-011"]]), od4)
+    check("OD-04: body from its section", od4["body"] == "The tension, in a paragraph.", od4["body"])
+    check("OD-04: blocks open item F-011", od4["blocks"] == ["F-011"], od4["blocks"])
+    check("OD-04: milestone M3", od4["milestones"] == ["M3 — Export"], od4["milestones"])
+    check("Q7 cites OD-04", qs[1]["cites"] == ["OD-04"], qs[1]["cites"])
+    check("no WAITING.md yet: no warning", state.waiting_warnings(s["waiting"]) == [], s["warnings"])
+    page = dashboard.render(s, refresh=0)
+    check("legacy rows tagged with their file", '<span class="chip src" title="not moved to WAITING.md yet">STATE.md</span>' in page)
+    check("Q7 (open): linked, no grey chip", ">Q4?<" in page and ">Q8?<" not in page)
     check("nested list item indented", 'style="margin-left:16px">a nested option</li>' in page)
     check("a wrapped line stays in its item", "leading idea, wrapped on two lines.</li>" in page)
-    check("no dead link to a question", 'href="#q-"' not in page)
+    s = project({"harness/STATE.md": STATE_MD, "harness/FEATURES.json": FEATURES,
+                 "harness/OPEN-DECISIONS.md": OPEN_DECISIONS, "harness/WAITING.md": "## Actions\n"})
+    check("WAITING.md added: a warning per file to move",
+          [x.split(" — ")[0] for x in state.waiting_warnings(s["waiting"])] == ["1 open question still in harness/STATE.md",
+                                                       "2 open questions still in harness/OPEN-DECISIONS.md"],
+          s["warnings"])
 
     print("── links in text")
     cases = [
@@ -166,10 +217,12 @@ def main():
         check(repr(text), got == want, got)
 
     print("── a fresh project: nothing waits, no pages")
-    s = project({"harness/STATE.md": "## Open questions\n\n- <question> → <who/what will answer it>\n",
+    s = project({"harness/STATE.md": (ROOT / "project/harness/STATE.md").read_text(encoding="utf-8"),
+                 "harness/WAITING.md": (ROOT / "project/harness/WAITING.md").read_text(encoding="utf-8"),
                  "harness/ARTIFACTS.md": "| Updated | Page | What | Status |\n|---|---|---|---|\n"})
-    check("no questions, no decisions, no pages",
-          (s["waiting"], s["artifacts"]) == ({"questions": [], "decisions": []}, []), (s["waiting"], s["artifacts"]))
+    w = s["waiting"]
+    check("the template's files: no action, no question, no page",
+          (w["actions"], w["questions"], w["later"], s["artifacts"]) == ([], [], [], []), (w, s["artifacts"]))
     page = dashboard.render(s, refresh=0)
     check("no card, no header link, no pages strip",
           'id="waiting"' not in page and "Waiting on you" not in page and 'class="pages"' not in page)

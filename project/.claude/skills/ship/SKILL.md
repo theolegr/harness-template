@@ -113,11 +113,11 @@ Read the answer: the `VERDICT:` line, the blocking problems, the `FINDING:` line
 A few lines: what shipped, the verdict (and fix rounds, if any), the new
 backlog items, the metric, the next item. Then ask: "Ship the next one?"
 
-A question you asked that the user hasn't answered yet, or an item that now
-waits on them, is written down before you end the turn: `feature.sh <id>
-blocked "<what it waits on>"` (citing the `Qn` of the open question it waits
-on, if any), or `harness/STATE.md` → Open questions, numbered `Qn` (`AGENTS.md` §5,
-rule 10: numbers are never reused).
+A question you asked that the user hasn't answered yet, or something only they
+can do, is written down before you end the turn: a `Qn` or an `An` in
+`harness/WAITING.md`, and `feature.sh <id> blocked "waiting on <user>: A2"` for
+the item that waits on it (`AGENTS.md` §5, rule 10: numbers are never reused).
+Name what you added in your report, in plain words.
 
 Don't chain to the next item on your own — unless the user asked for several
 ("ship 3", "ship until the MVP"). Even then, stop at the first FAIL you can't

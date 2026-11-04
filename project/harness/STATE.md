@@ -2,6 +2,7 @@
 
 > Updated at the END of every session. Read at step 2 of `harness/guide/BOOT.md`.
 > **Git always wins** over this file. If they disagree, trust `git log`.
+> What waits on the user (questions, actions only they can do): `harness/WAITING.md`.
 
 ## Now
 
@@ -31,10 +32,6 @@
 > When the metric hasn't moved in 2+ sessions, log it here and act (see harness/GOAL.md).
 
 - <date> — <what we're stuck on> → <jump taken>
-
-## Open questions
-
-- <question> → <who/what will answer it>
 
 ## Session log (append-only, newest first)
 

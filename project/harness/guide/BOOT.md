@@ -12,7 +12,8 @@
 
 2. **Read the state of the world.**
    Read `harness/STATE.md` (current status) and `harness/GOAL.md` (the target + metric).
-   Read the last 10 lines of `harness/DECISIONS.md`.
+   Read the last 10 lines of `harness/DECISIONS.md`, and `harness/WAITING.md`: an action whose
+   `Done when` you can check now — check it; done → remove it and unblock its items.
 
 3. **Read the git reality.**
    `git log --oneline -10 && git status`
@@ -57,7 +58,8 @@
 2. Update the status of the item you touched: `./harness/scripts/feature.sh <id> <status>`
    (`done` / `cut` moves it to `FEATURES-DONE.json`). Don't edit statuses by hand.
 3. Update `harness/STATE.md` (what changed, what's next, any blocker). Anything that waits on the
-   user → a `blocked` item with its reason, or a line in Open questions (`AGENTS.md` §5).
+   user → a question or an action in `harness/WAITING.md`, cited by the items it blocks (`AGENTS.md` §5,
+   rule 10).
 4. Append any real decision to `harness/DECISIONS.md` (dated, with rationale).
 5. `git add <your files> && git commit -m "<type>: <what>"` — `git add -A` only when you're alone in
    this folder (no other session's work in it).

@@ -94,7 +94,7 @@ template's. A file you never edited is replaced; a file the template didn't
 change stays yours; when both changed it, the two are merged (3-way) if the
 edits don't overlap, else yours is kept and the new version written next to it
 as `<file>.harness-new`. A file you deleted is not re-added; new files are
-added. Your data (`GOAL.md`, `STATE.md`, `FEATURES.json`, `EVAL.md`, `PLAN.md`,
+added. Your data (`GOAL.md`, `STATE.md`, `WAITING.md`, `FEATURES.json`, `EVAL.md`, `PLAN.md`,
 `DECISIONS.md`, `DESIGN.md`, `ARTIFACTS.md`) is never touched — no merge, no `.harness-new`; the
 update only says when the template's version of one changed (the new one is in
 `harness/template/project/`). No interview, no commit — review with `git diff`, then commit.
@@ -113,7 +113,7 @@ my-project/
 ├── AGENTS.md              ← entry point, read by every agent
 ├── CLAUDE.md              ← "@AGENTS.md" (Claude Code imports AGENTS.md)
 ├── harness/               ← committed: this project's harness
-│   ├── GOAL.md  STATE.md  FEATURES.json  PLAN.md  EVAL.md  DECISIONS.md
+│   ├── GOAL.md  STATE.md  WAITING.md  FEATURES.json  PLAN.md  EVAL.md  DECISIONS.md
 │   ├── guide/             ← how we work (changes rarely)
 │   ├── scripts/           ← status, dashboard, check, loop
 │   └── template/          ← git-ignored copy of this template
@@ -136,6 +136,7 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `AGENTS.md` (root) | Entry point / onboarding for agents |
 | `GOAL.md` | Target + metric + constraints + the `/goal` contract |
 | `STATE.md` | Current state of the world |
+| `WAITING.md` | What waits on you, and only on you: **questions** (`Q1`…) you answer in a sentence — a choice with the agent's recommendation, a fact, an OK — and **actions** (`A1`…) you must do yourself outside the session — an account, a key, a payment, a call, a draft to review — each with how the agent will check it's done. Optional `By:` date (overdue shows red), `Blocks:` items; `## Later` for what blocks nothing yet. A blocked backlog item cites the number. Numbers are never reused |
 | `FEATURES.json` | Backlog (JSON, not MD): features `F-`, bugs `B-`, tech debt `D-` — only the work left |
 | `FEATURES-DONE.json` | Archive of done/cut features (created by `feature.sh`) |
 | `EVAL.md` | Instruments + blind scoring + score history |
@@ -143,7 +144,6 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 | `DECISIONS.md` | Decision log (ADR-lite), in-repo |
 | `DESIGN.md` | Visual direction and the values to build UI with (brief, tokens, components, layout per size); `no UI` for a CLI or an API |
 | `ARTIFACTS.md` | Links to the pages published outside the repo (design canvases, diagrams, shared mockups), current or archived; the dashboard links them under the goal |
-| `OPEN-DECISIONS.md` | *Optional, not created.* Decisions only you can make, when a project keeps many of them apart from the open questions (e.g. after a design phase): a `## OD-01 — <topic>` section each, optionally summed up in a table `ID \| Topic \| Blocks \| Default` above them. The dashboard shows them next to the open questions |
 
 ### How we work — `harness/guide/` (changes rarely)
 
@@ -160,8 +160,8 @@ In this repo, everything that gets copied lives in [`project/`](project/).
 
 | File | Role |
 |---|---|
-| `harness-status.sh` | **Show** state, don't describe it |
-| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, what waits on you (the open questions and, when kept, `OPEN-DECISIONS.md`, each linked to the items and milestones it holds up), the backlog as one ordered list (details fold out; a blocked item links to the numbered open question it waits on), metric and score trend, state, decisions, commits; the published pages (`ARTIFACTS.md`) one click away under the goal. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
+| `harness-status.sh` | **Show** state, don't describe it — including what waits on you (`WAITING.md`), overdue first |
+| `dashboard.py` | The same state as one HTML page (`harness/dashboard.html`, git-ignored): progress, next item, milestones, what waits on you (`WAITING.md`: the actions only you can do, then the questions, soonest due first, overdue in red, each linked to the items and milestones it holds up; *Later* folded), the backlog as one ordered list (details fold out; a blocked item links to the action or question it waits on), metric and score trend, state, decisions, commits; the published pages (`ARTIFACTS.md`) one click away under the goal. Rewritten at the end of each Claude turn once it exists; an open tab reloads itself. `--open`, `--watch`. A view — writes nothing else |
 | `state.py` | The state as JSON — what `harness-status.sh` and `dashboard.py` read; agents can too |
 | `harness-check.sh` | The verification instrument (exit code); `TEST_CMD` / `LINT_CMD` at the top |
 | `disk.py` | When the disk runs low (under 15% free, 50 GB at most), shows what this project could free: the other worktrees (size, merged or not; `git worktree remove` for the clean, idle, merged ones) and the Xcode builds whose folder is gone. Suggests the commands, never runs them. In the status at session start, silent while there's room |
