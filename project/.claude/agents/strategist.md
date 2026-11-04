@@ -35,6 +35,7 @@ PROPOSAL: <feature|bug|debt> | <p0-p3> | <name> | <testable acceptance criterion
 Also flag, when you see them:
 - `CUT: <id> — <why it no longer serves the goal>`
 - `QUESTION: <something only the user can decide>`
+- `ACTION: <something only the user can do: an account, a key, a call, a review>`
 
 Rules:
 - A proposal that goes against a non-goal or a declined decision: say so
@@ -42,5 +43,6 @@ Rules:
 - Nothing already in the backlog. No generic best-practice lists.
 - Fewer, sharper proposals beat many. Zero is a valid answer.
 
-The main agent shows your proposals and questions to the user; accepted items
-are added with `harness/scripts/feature.sh add`.
+The main agent shows your proposals, questions and actions to the user; accepted
+items are added with `harness/scripts/feature.sh add`, the questions and actions
+left open go to `harness/WAITING.md`.

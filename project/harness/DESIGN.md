@@ -66,4 +66,4 @@ choice still open costs a variable swap, not a rewrite.
 
 ## Open design questions
 
-In `harness/STATE.md` → Open questions (prefix them "Design:").
+In `harness/WAITING.md`, as questions (prefix them "Design:").

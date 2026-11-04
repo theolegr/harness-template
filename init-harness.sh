@@ -30,8 +30,8 @@
 #
 # Non-destructive: a file that already exists is kept as-is; if the harness
 # version differs, it is written next to it as <file>.harness-new for review.
-# Your data (GOAL, STATE, FEATURES, EVAL, PLAN, DECISIONS, DESIGN, ARTIFACTS in harness/)
-# is never touched once it exists: no merge, no <file>.harness-new.
+# Your data (GOAL, STATE, WAITING, FEATURES, EVAL, PLAN, DECISIONS, DESIGN, ARTIFACTS in
+# harness/) is never touched once it exists: no merge, no <file>.harness-new.
 #
 # --update (run the NEW template on the project:
 #   git -C ~/harness-template pull && ~/harness-template/init-harness.sh --update my-project)
@@ -96,7 +96,7 @@ fi
 # The project's data: once it exists, never merged, replaced or shadowed by a .harness-new
 is_data() {
   case "$1" in
-    harness/GOAL.md|harness/STATE.md|harness/FEATURES.json|harness/EVAL.md|harness/PLAN.md|\
+    harness/GOAL.md|harness/STATE.md|harness/WAITING.md|harness/FEATURES.json|harness/EVAL.md|harness/PLAN.md|\
     harness/DECISIONS.md|harness/DESIGN.md|harness/ARTIFACTS.md) return 0;;
   esac
   return 1
@@ -235,6 +235,10 @@ fi
 if [ "$UPDATE" -eq 1 ]; then
   echo
   echo "── Updated. Nothing committed — review with: git status && git diff"
+  if printf '%s\n' "${ADDED[@]+"${ADDED[@]}"}" | grep -qxF harness/WAITING.md; then
+    echo "   New: harness/WAITING.md holds what waits on you, as questions (Q) and actions only you can do (A)."
+    echo "   Ask the agent to move STATE.md's Open questions there (the status reminds it until it's done)."
+  fi
   if [ "${#REVIEW[@]}" -gt 0 ]; then
     echo "   To merge by hand (you and the template changed the same lines):"
     for f in "${REVIEW[@]}"; do echo "     $f  ←  $f.harness-new"; done

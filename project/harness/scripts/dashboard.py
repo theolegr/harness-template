@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True   # no __pycache__ left in harness/scripts/
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from state import QREF, ROOT, collect  # noqa: E402
+from state import BLOCKS_FIELD, DID, ROOT, WREF, collect  # noqa: E402
 
 OUT = ROOT / "harness" / "dashboard.html"
 RELOAD = 30   # seconds: an open tab picks up a rewrite (the Stop hook's, --watch's) on its own
@@ -123,20 +123,30 @@ def short(name):
     return (name or "").partition(" — ")[0][:12]
 
 
-def qchip(q, open_qs):
-    """A Q<n> cited by a blocked item: red if it's an open question, grey if not (answered, or not a number)."""
-    if q in open_qs:
-        return f'<a class="chip q" href="#q-{q}" title="waits on open question {q} (STATE.md)">{q}</a>'
-    return f'<span class="chip q unknown" title="{q} is not among the open questions — answered?">{q}?</span>'
+def wchips(reason, wait):
+    """The questions and actions a blocked item's reason cites (Q3, A2): linked while they wait, grey once
+    settled. A number past the file's `Last numbers` isn't one of them (an "A54" of some other list)."""
+    kinds, last = wait.get("kinds", {}), wait.get("last", {})
+    cited = [p + n for p, n in WREF.findall(reason or "")] + [i for i in DID.findall(reason or "") if i in kinds]
+    out = []
+    for rid in dict.fromkeys(cited):
+        kind = kinds.get(rid)
+        if kind:
+            out.append(f'<a class="chip {kind[0]}" href="#w-{esc(rid)}" title="waits on {kind} {esc(rid)} '
+                       f'(WAITING.md)">{esc(rid)}</a>')
+        elif rid[1:].isdigit() and (int(rid[1:]) <= last[rid[0]] if rid[0] in last else rid[0] == "Q"):
+            out.append(f'<span class="chip {rid[0].lower()} unknown" title="{esc(rid)} no longer waits on you '
+                       f'— settled?">{esc(rid)}?</span>')
+    return "".join(out)
 
 
-def item(f, mark, ms_of, open_qs=frozenset()):
+def item(f, mark, ms_of, wait=None):
     """One backlog row: the title is always visible, the rest folds out."""
     fid, kind = f.get("id", ""), f.get("type", "feature")
     prio = str(f.get("priority", "")).upper()
     tags = "".join(f'<span class="chip ms">{esc(m)}</span>' for m in ms_of.get(fid, []))
-    if f.get("status") == "blocked":   # the open question(s) it waits on, cited as Q<n> in its reason
-        tags += "".join(qchip(q, open_qs) for q in dict.fromkeys(QREF.findall(f.get("blocked") or "")))
+    if f.get("status") == "blocked":   # the question(s) and action(s) it waits on, cited in its reason
+        tags += wchips(f.get("blocked"), wait or {})
     if prio:
         tags += f'<span class="chip">{esc(prio)}</span>'
     if f.get("status") == "done" and f.get("closed"):
@@ -183,34 +193,35 @@ def milestone(m):
             f'<div class="ms-dod"><span class="label">Definition of done</span>{dod}</div></details>')
 
 
-# ── What waits on the user: open questions (STATE.md), open decisions (OPEN-DECISIONS.md, when kept) ──
+# ── What waits on the user (WAITING.md): actions only they can do, questions only they can answer ──
 
 def ref(kind, rid, what=None):
-    """A link to a row of the page — an item, a question, a decision — and what it is."""
+    """A link to a row of the page — an item, a question, an action — and what it is."""
     return (f'<a class="id" href="#{kind}-{esc(rid)}">{esc(rid)}</a>'
             + (f" {inline(what)}" if what else ""))
 
 
 def prose(md):
     """A section's Markdown, plainly: paragraphs, and list items indented as deep as they're nested."""
-    blocks = []   # [depth, text] for a list item, [None, text] for a paragraph
+    blocks = []   # [depth, text, numbered] for a list item, [None, text, False] for a paragraph
     for line in md.splitlines():
-        m = re.match(r"(\s*)(?:[-*]|\d+\.)\s+(.*)", line)
+        m = re.match(r"(\s*)([-*]|\d+\.)\s+(.*)", line)
         if m:
-            blocks.append([len(m.group(1).expandtabs(4)) // 2, m.group(2)])
+            blocks.append([len(m.group(1).expandtabs(4)) // 2, m.group(3), m.group(2)[0].isdigit()])
         elif line.strip() and blocks and (line[0].isspace() and blocks[-1][0] is not None
                                           or blocks[-1][0] is None and blocks[-1][1]):
             blocks[-1][1] += " " + line.strip()   # a wrapped line continues its item or paragraph
         else:
-            blocks.append([None, line.strip()])   # a blank line ends a paragraph
-    out = "".join(f'<li style="margin-left:{d * 16}px">{inline(t)}</li>' if d is not None else f"<p>{inline(t)}</p>"
-                  for d, t in blocks if t)
-    # consecutive items make one list
-    return re.sub(r"((?:<li\b.*?</li>)+)", r'<ul class="list">\1</ul>', out)
+            blocks.append([None, line.strip(), False])   # a blank line ends a paragraph
+    out = "".join(f'<li data-{"ol" if n else "ul"} style="margin-left:{d * 16}px">{inline(t)}</li>' if d is not None
+                  else f"<p>{inline(t)}</p>" for d, t, n in blocks if t)
+    # consecutive items make one list: numbered (an action's steps) or not
+    out = re.sub(r"((?:<li data-ol\b.*?</li>)+)", r'<ol class="list ordered">\1</ol>', out)
+    return re.sub(r"((?:<li data-ul\b.*?</li>)+)", r'<ul class="list">\1</ul>', out)
 
 
 def open_row(anchor, mark, line, tags="", facts=(), more=""):
-    """One question or decision: the gist always visible, the rest folds out (like a backlog row)."""
+    """One question or action: the gist always visible, the rest folds out (like a backlog row)."""
     body = "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in facts if v)
     return (f'<details class="item open-row" id="{esc(anchor)}" data-key="{esc(anchor)}"><summary>'
             f'<span class="mark">{esc(mark)}</span><span class="line">{line}</span>'
@@ -219,36 +230,49 @@ def open_row(anchor, mark, line, tags="", facts=(), more=""):
             + (f'<div class="prose-body">{more}</div>' if more else "") + "</details>")
 
 
+def due(r):
+    """When it must be settled by: red once the date has passed."""
+    if not r["due"]:
+        return ""
+    if r["overdue"]:
+        return f'<span class="chip overdue" title="to settle by {esc(r["due"])}">overdue · {short_date(r["due"])}</span>'
+    return f'<span class="chip due" title="to settle by {esc(r["due"])}">by {short_date(r["due"])}</span>'
+
+
+def wrow(r, anchor, names, kinds):
+    """One action or question: number and gist always visible; its fields, steps and links fold out."""
+    blocks = "".join(f'<a class="chip {r["kind"][0]}" href="#item-{esc(i)}" title="blocks {esc(i)}: '
+                     f'{esc(names.get(i))}">{esc(i)}</a>' for i in r["blocks"])
+    old = (f'<span class="chip src" title="not moved to WAITING.md yet">{esc(r["source"])}</span>'
+           if r["source"] != "WAITING.md" else "")
+    tags = (due(r) + "".join(f'<span class="chip ms">{esc(short(m))}</span>' for m in r["milestones"])
+            + blocks + old)
+    # a Blocks field naming open items shows as links below; one naming something else stays as written
+    facts = [(k, inline(v)) for k, v in r["fields"] if not (k.lower() in BLOCKS_FIELD and r["blocks"])]
+    facts += [("Blocks", "<br>".join(ref("item", i, names.get(i)) for i in r["blocks"])),
+              ("See", " ".join(ref("w", i) + f' <span class="muted">{kinds[i]}</span>' for i in r["cites"]))]
+    return open_row(anchor, r["id"] or "•", inline(r["text"]), tags, facts, prose(r["body"]))
+
+
 def waiting(w, b):
-    qs, ds = w["questions"], w["decisions"]
-    if not qs and not ds:
+    acts, qs, later = w["actions"], w["questions"], w["later"]
+    if not (acts or qs or later):
         return ""
     names = {f.get("id"): f.get("name") for f in b["in_progress"] + b["todo"] + b["blocked"]}
-    titles = {d["id"]: d["title"] for d in ds}
-    blocks = lambda ids: "".join(f'<a class="chip q" href="#item-{esc(i)}" title="blocks {esc(i)}: '
-                                 f'{esc(names.get(i))}">{esc(i)}</a>' for i in ids)
-    q_rows = "".join(open_row(
-        f"q-{q['id'] or n}", q["id"] or "•", inline(q["text"]), blocks(q["blocks"]),
-        [("Blocks", "<br>".join(ref("item", i, names.get(i)) for i in q["blocks"])),
-         ("Decisions", "<br>".join(ref("decision", d, titles.get(d)) for d in q["decisions"]))])
-        for n, q in enumerate(qs, 1))
-    d_rows = "".join(open_row(
-        f"decision-{d['id']}", d["id"],
-        f'<strong>{inline(d["title"] or d["id"])}</strong>'
-        + (f' <span class="muted">· blocks {inline(d["blocks"])}</span>' if d["blocks"] else ""),
-        "".join(f'<span class="chip ms">{esc(short(m))}</span>' for m in d["milestones"]) + blocks(d["blocks_items"]),
-        [("Default", inline(d["default"])), ("Asked in", " ".join(ref("q", q) for q in d["questions"])),
-         ("Blocks", "<br>".join(ref("item", i, names.get(i)) for i in d["blocks_items"]))],
-        prose(d["body"])) for d in ds)
+    kinds = {r["id"]: r["kind"] for r in acts + qs + later if r["id"]}
+    rows = lambda rs, key: "".join(wrow(r, f"w-{r['id'] or f'{key}-{n}'}", names, kinds)
+                                  for n, r in enumerate(rs, 1))
     cols = []
-    for title, src, rows, n in (("Open questions", "STATE.md", q_rows, len(qs)),
-                                ("Open decisions", "OPEN-DECISIONS.md", d_rows, len(ds))):
-        if rows:
-            cols.append(f'<div><h3 class="group">{title} <span class="count">{n}</span> '
-                        f'<code class="src">{src}</code></h3><div class="items">{rows}</div></div>')
+    for title, hint, rs in (("Actions", "only you can do these", acts), ("Questions", "only you can answer", qs)):
+        if rs:
+            cols.append(f'<div><h3 class="group">{title} <span class="count">{len(rs)}</span> '
+                        f'<span class="src">{hint}</span></h3><div class="items">{rows(rs, title.lower())}</div></div>')
+    rest = (fold("later", 'Later <span class="src">nothing waits on these yet</span>',
+                 f'<div class="items">{rows(later, "later")}</div>', len(later)) if later else "")
     return (f'<section class="card waiting" id="waiting"><div class="backlog-head"><h2>Waiting on you</h2>'
-            f'<p class="sub">Only you can settle these — answer in a session, the agent records it.</p></div>'
-            f'<div class="waiting-cols">{"".join(cols)}</div></section>')
+            f'<p class="sub">Do the actions, then say so: the agent checks and moves on. Answer the questions in a '
+            f'session: the agent records it. <code>harness/WAITING.md</code></p></div>'
+            f'<div class="waiting-cols{" two" if len(cols) == 2 else ""}">{"".join(cols)}</div>{rest}</section>')
 
 
 def pages(arts):
@@ -338,9 +362,11 @@ def render(s, refresh=RELOAD):
         meta.append(f'<span>Branch <code>{esc(gt["branch"])}</code></span>')
     last_pass = ago(ck["last_pass"])
     meta.append(f'<span>Last green check <strong>{esc(last_pass or "never")}</strong></span>')
-    n_waiting = len(s["waiting"]["questions"]) + len(s["waiting"]["decisions"])
+    w = s["waiting"]
+    n_waiting = len(w["actions"]) + len(w["questions"])
     if n_waiting:
-        meta.append(f'<a class="meta-link" href="#waiting">Waiting on you <strong>{n_waiting}</strong></a>')
+        late = f' · <strong class="late">{w["overdue"]} overdue</strong>' if w["overdue"] else ""
+        meta.append(f'<a class="meta-link" href="#waiting">Waiting on you <strong>{n_waiting}</strong>{late}</a>')
     goal = (f'<p class="goal">{inline(g["target"])}</p>' if g["target"]
             else empty("No target yet — set it in `harness/GOAL.md` (or run `/harness-init`)."))
     warn = (f'<div class="warn" role="status"><strong>⚠ Needs attention</strong>{ul(map(inline, s["warnings"]))}</div>'
@@ -385,10 +411,11 @@ def render(s, refresh=RELOAD):
     if b["blocked"]:
         groups.append(("Blocked", b["blocked"], lambda i: '⛔<span class="sr"> blocked</span>'))
     groups.append(("Done", b["shipped"], lambda i: '✓<span class="sr"> done</span>'))
-    open_qs = {m.group(1) for q in st["open_questions"] if (m := re.match(r"\*\*(Q\d+)\*\*", q))}
+    wait = {"kinds": {r["id"]: r["kind"] for r in w["actions"] + w["questions"] + w["later"] if r["id"]},
+            "last": w["last"]}
     lists = ""
     for title, items, mark in groups:
-        rows = "".join(item(f, mark(i), ms_of, open_qs) for i, f in enumerate(items))
+        rows = "".join(item(f, mark(i), ms_of, wait) for i, f in enumerate(items))
         lists += (f'<h3 class="group">{title} <span class="count">{len(items)}</span></h3>'
                   + (f'<div class="items">{rows}</div>' if rows else empty(
                       "Nothing left — ask the strategist for ideas, or `./harness/scripts/feature.sh add …`"
@@ -599,7 +626,10 @@ grid-template-areas:"mark line tags chev";gap:2px 10px;align-items:start;padding
 color:var(--ink-2)}
 .chip.ms{border-color:transparent;background:var(--track);color:var(--ink)}
 .chip.q{border-color:var(--critical);color:var(--ink)}
-.chip.q.unknown{border-color:var(--border);color:var(--muted)}
+.chip.a{border-color:var(--warning);color:var(--ink)}
+.chip.q.unknown,.chip.a.unknown{border-color:var(--border);color:var(--muted)}
+.chip.overdue{background:var(--critical);border-color:var(--critical);color:#fff}
+.chip.src{font-weight:400;color:var(--muted)}
 .when{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
 @media (max-width:560px){.item>summary{grid-template-columns:22px minmax(0,1fr) 14px;
 grid-template-areas:"mark line chev" ". tags ."}.tags{min-height:0}}
@@ -612,11 +642,12 @@ font-size:13px}
 .facts dt{color:var(--muted)}.facts dd{margin:0;color:var(--ink-2)}
 @media (max-width:560px){.facts{padding-left:38px;grid-template-columns:minmax(0,1fr)}.facts dd{margin-bottom:6px}}
 
-/* waiting on you: questions and decisions, side by side when there's room */
+/* waiting on you: actions and questions, side by side when there's room; later folded under them */
 .waiting .backlog-head .sub{margin:0}
 .waiting-cols{display:grid;gap:0 28px;grid-template-columns:minmax(0,1fr)}
-@media (min-width:1100px){.waiting-cols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
-.waiting .group .src{font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
+@media (min-width:1100px){.waiting-cols.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.meta .late{color:var(--critical)}
+.waiting .src{font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
 .open-row>summary{grid-template-columns:48px minmax(0,1fr) auto 14px}
 .open-row .mark{text-align:left;color:var(--ink-2);white-space:nowrap}
 .open-row .facts{padding-left:64px}
@@ -706,10 +737,10 @@ document.querySelectorAll('.chart-wrap').forEach(w => {
   hit.addEventListener('mouseleave', hide);
 });
 
-// a link to a row of the page (Q3 → its question, F-010 → its item) unfolds it
+// a link to a row of the page (A2 → its action, F-010 → its item) unfolds it, and the fold it sits in
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]'), t = a && document.getElementById(decodeURIComponent(a.hash.slice(1)));
-  if (t && t.tagName === 'DETAILS') t.open = true;
+  for (let d = t; d; d = d.parentElement && d.parentElement.closest('details')) if (d.tagName === 'DETAILS') d.open = true;
 });
 
 try { const y = Number(sessionStorage.getItem('harness-scroll')); if (y) window.scrollTo(0, y); } catch (e) {}

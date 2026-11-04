@@ -90,7 +90,7 @@ say **"/design"** (or "let's do the mockups"):
    what goes, circle what stays. Choices you can't make yet (palette, dark or
    light) become switches on the mockup instead of more rounds.
 4. **Recorded**: exact values in `harness/DESIGN.md`, the why in
-   `harness/DECISIONS.md`, open choices in `harness/STATE.md`. From then on,
+   `harness/DECISIONS.md`, open choices in `harness/WAITING.md`. From then on,
    every UI item is planned from `DESIGN.md`, and the reviewer checks screens
    against it.
 
@@ -127,6 +127,17 @@ Things that happen on their own, whatever the agent "decides":
 
 Want several in a row? *"ship until the MVP"* or *"ship 3"*. It still stops on
 anything only you can decide.
+
+What it needs from you is written down in `harness/WAITING.md`, in two kinds:
+
+- **Questions** (`Q3`): answer in a sentence, in any session — *"Q3: B"*. The
+  agent records the choice and unblocks what waited on it.
+- **Actions** (`A2`): things only you can do — open an account, paste a key
+  into the server's env file, call the accountant, review a draft. Each says how
+  the agent will know it's done; do it, then say *"A2 done"*: it checks, then
+  carries on.
+
+A date (`By: 2026-11-15`) turns red on the dashboard once it's past.
 
 ## 4. The reviewer feeds the backlog
 
@@ -181,8 +192,8 @@ with one item at a time, and review the branch before merging.
 ## 8. Your weekly five minutes
 
 Open the dashboard (`./harness/scripts/dashboard.py --open`, or ask for it):
-what waits on you first (open questions, and open decisions if the project
-keeps them), then backlog, milestones, the metric's trend, blockers and
+what waits on you first (the actions only you can do, then the questions,
+overdue ones in red), then backlog, milestones, the metric's trend, blockers and
 decisions on one page, with links to the pages published for the project.
 
 - Did the metric in `harness/GOAL.md` move? Two sessions without progress →

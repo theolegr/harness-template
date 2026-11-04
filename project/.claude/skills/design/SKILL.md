@@ -30,7 +30,7 @@ paragraphs about them.
 Use the AskUserQuestion tool when the answer has natural options (max 4
 questions per call, your recommendation first); plain text for free answers.
 After each round, restate in 2 lines what you understood. Every question can
-be skipped: skipped answers become open questions.
+be skipped: skipped answers become questions in `harness/WAITING.md`.
 
 **Round 1 — Who and what**
 - Who uses it, in what situation (on a phone between two jobs, at a desk…)?
@@ -108,9 +108,9 @@ status), so the next session can find it.
 2. `harness/DECISIONS.md`: one entry — what was chosen, why, what was rejected
    (directions, palettes, fonts, the elements the user crossed out). A new
    direction marks the old entry `superseded`.
-3. `harness/STATE.md` → Open questions: every open choice, numbered and prefixed
-   (`**Q4** — Design: …`, numbering in `AGENTS.md` §5, rule 10),
-   with who decides and before which item.
+3. `harness/WAITING.md` → Questions: every open choice, numbered and prefixed
+   (`**Q4** — Design: … · Reco: … · Blocks: F-007`, `AGENTS.md` §5, rule 10).
+   Something only the user can provide (the logo files, photos, a brand guide) → an action (`**A2**`).
 4. `harness/FEATURES.json`: the UI items' notes point to the mockup and to
    `DESIGN.md` ("implements the validated mockup, no improvised design").
 5. Close the design item only when the **user** validates the mockup

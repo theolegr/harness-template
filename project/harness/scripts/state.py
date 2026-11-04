@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """state.py — the project's state as one JSON object.
 
-Reads the harness files (GOAL, STATE, FEATURES, FEATURES-DONE, EVAL, PLAN,
-DECISIONS, ARTIFACTS, and OPEN-DECISIONS when the project keeps one), git and
-the loop's runtime files, and prints what they say. It never writes anything:
-the files stay the source of truth, this is a view.
+Reads the harness files (GOAL, STATE, WAITING, FEATURES, FEATURES-DONE, EVAL,
+PLAN, DECISIONS, ARTIFACTS), git and the loop's runtime files, and prints what
+they say. It never writes anything: the files stay the source of truth, this is
+a view. Projects set up before WAITING.md: STATE.md's "Open questions" and
+OPEN-DECISIONS.md are still read, as questions.
 
   ./harness/scripts/state.py            # JSON on stdout (for agents and scripts)
 
@@ -27,11 +28,15 @@ AUTOLINK = re.compile(r"<[^<>\s]*(?:://|@)[^<>\s]*>")
 # what may precede a value: a list marker, ❌, a label (**Repo**:, Did:, "name":)
 FIELD = re.compile(r'^\s*(?:[-*]\s+|\d+\.\s+)?(?:❌\s*)?(?:\*\*[^*]+\*\*:\s*|[A-Za-z][\w ]{0,30}:\s+|"[\w-]+":\s*)?')
 RUNTIME = ("harness/.loop.log", "harness/.loop.stop", "harness/.check.ok", "harness/dashboard.html")
-REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/FEATURES.json",
+REQUIRED = ["AGENTS.md", "CLAUDE.md", "harness/GOAL.md", "harness/STATE.md", "harness/WAITING.md", "harness/FEATURES.json",
             "harness/EVAL.md", "harness/PLAN.md", "harness/DECISIONS.md", "harness/guide/BOOT.md"]
 PRIORITY = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
-QREF = re.compile(r"\bQ\d+\b")   # an open question of STATE.md (Q1, Q2…), cited in a blocked item's reason
+# a question (Q3) or an action (A2) of WAITING.md, as a blocked item's reason cites it
+WREF = re.compile(r"(?<![\w-])([QA])(\d+)(?![\w-])")
 DID = re.compile(r"[A-Z][A-Z0-9]*-\d+")   # an id: F-003, OD-04
+# the date a question or an action must be settled by: "By: 2026-11-15" (or due, before, avant, d'ici le)
+DUE = re.compile(r"\b(?:by|due|before|avant|d'ici)(?:\s+le)?\s*:?\s*(\d{4}-\d{2}-\d{2})", re.I)
+BLOCKS_FIELD = ("blocks", "unblocks", "bloque", "débloque")   # a field listing the items it holds up
 MDLINK = re.compile(r"\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)")   # the URL may hold (balanced) parentheses
 
 
@@ -245,8 +250,9 @@ def decisions():
 
 
 def open_decisions():
-    """harness/OPEN-DECISIONS.md, when the project keeps one: decisions only the user can make, each a
-    `## <ID> — <title>` section, optionally summed up first in a table (ID | Topic | Blocks | Default)."""
+    """harness/OPEN-DECISIONS.md, kept by projects set up before WAITING.md: decisions only the user can make,
+    each a `## <ID> — <title>` section, optionally summed up first in a table (ID | Topic | Blocks | Default).
+    Read as questions until they move to WAITING.md."""
     md = re.sub(r"<!--.*?-->", "", read("harness/OPEN-DECISIONS.md"), flags=re.S)
     intro = re.split(r"^## ", md, maxsplit=1, flags=re.M)[0]
     head = header(intro)
@@ -266,25 +272,106 @@ def open_decisions():
     return list(out.values())
 
 
-def waiting(st, b, decisions):
-    """What waits on the user: STATE.md's open questions and the open decisions, each with what it holds up —
-    the blocked items that cite it, the milestones whose definition of done names it — and their links."""
+def entries(text):
+    """The top-level list items of a section: [first line, the lines indented under it (steps, details)]."""
+    out, attach = [], False
+    for line in text.splitlines():
+        m = re.match(r"[-*]\s+(.*)", line)
+        if m:
+            out.append([m.group(1).strip(), []])
+            attach = True
+        elif attach and (not line.strip() or line[:1].isspace()):
+            out[-1][1].append(line)
+        else:
+            attach = False   # a paragraph or a quote ends the item
+    return [(first, dedent(body)) for first, body in out if first and not placeholder(first)]
+
+
+def dedent(lines):
+    lines = [l.rstrip() for l in lines]
+    while lines and not lines[-1]:
+        lines.pop()
+    pad = min((len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
+    return "\n".join(l[pad:] for l in lines).strip("\n")
+
+
+def last_numbers(*texts):
+    """The highest Q and A numbers ever given, from the `Last numbers: Q12 · A4` line(s)."""
+    last = {}
+    for t in texts:
+        for line in re.findall(r"Last numbers?\s*:\s*(.*)", t or ""):
+            for p, n in WREF.findall(line):
+                last[p] = max(last.get(p, 0), int(n))
+    return last
+
+
+def waiting_row(first, body, kind, source):
+    """One question or action: its number, its gist, the ` · Label: value` fields after it, its due date."""
+    m = re.match(r"\*\*([QA]\d+)\*\*\s*(?:[—–:-]\s*)?(.*)", first, flags=re.S)
+    rid, text = (m.group(1), m.group(2)) if m else (None, first)
+    if rid:   # the number says what it is, wherever it was filed
+        kind = "action" if rid[0] == "A" else "question"
+    parts = re.split(r"\s+·\s+", text)
+    gist, fields = parts[0], []
+    for p in parts[1:]:
+        f = re.match(r"([^:]{1,24}?)\s*:\s+(.+)", p)   # "Reco: A", never "https://…"
+        if f:
+            fields.append([f.group(1).strip(), f.group(2).strip()])
+        else:
+            gist += " · " + p
+    due = DUE.search(text)
+    return {"id": rid, "kind": kind, "text": gist.strip(), "fields": fields, "body": body,
+            "due": due.group(1) if due else None, "source": source}
+
+
+def waiting(st, b, decisions=None):
+    """What waits on the user, from harness/WAITING.md: the actions only they can do, the questions only they
+    can answer, and the ones parked for later — each with what it holds up (the blocked items that cite it, the
+    items of its Blocks field, the milestones whose definition of done names it) and its due date.
+    Not yet moved there: STATE.md's open questions and OPEN-DECISIONS.md's decisions, read as questions."""
+    md = re.sub(r"<!--.*?-->", "", read("harness/WAITING.md"), flags=re.S)
+    rows, later = [], []
+    for title, kind in (("Actions", "action"), ("Questions", "question"), ("Later", "question")):
+        for first, body in entries(section(md, title)):
+            r = waiting_row(first, body, kind, "WAITING.md")
+            (later if title == "Later" else rows).append(r)
+    legacy = [waiting_row(q, "", "question", "STATE.md") for q in st["open_questions"]]
+    for d in decisions if decisions is not None else open_decisions():
+        fields = [[k, d[f]] for k, f in (("Default", "default"), ("Blocks", "blocks")) if d.get(f)]
+        legacy.append({"id": d["id"], "kind": "question", "text": d["title"] or d["id"], "fields": fields,
+                       "body": d.get("body", ""), "due": None, "source": "OPEN-DECISIONS.md"})
+    rows += legacy
+
     open_items = b["in_progress"] + b["todo"] + b["blocked"]
-    ods = [d["id"] for d in decisions]
-    questions = []
-    for q in st["open_questions"]:
-        m = re.match(r"\*\*(Q\d+)\*\*\s*(?:[—–:-]\s*)?(.*)", q, flags=re.S)
-        qid, text = (m.group(1), m.group(2)) if m else (None, q)
-        questions.append({"id": qid, "text": text, "decisions": mentions(text, ods),
-                          "blocks": [f["id"] for f in b["blocked"] if qid and qid in QREF.findall(f.get("blocked") or "")]})
-    for d in decisions:
-        d["questions"] = [q["id"] for q in questions if q["id"] and d["id"] in q["decisions"]]
-        d["blocks_items"] = [f["id"] for f in open_items
-                             if mentions(d["blocks"], [f["id"]]) or mentions(f.get("blocked"), [d["id"]])]
-        d["milestones"] = [m["name"] for m in b["milestones"]
-                           if not (m["total"] and m["done"] == m["total"])   # a complete one waits on nothing
-                           and mentions(m["definition_of_done"], [d["id"]])]
-    return {"questions": questions, "decisions": decisions}
+    ids = [r["id"] for r in rows + later if r["id"]]
+    today = datetime.date.today().isoformat()
+    for r in rows + later:
+        rid = r["id"]
+        named = " ".join(v for k, v in r["fields"] if k.lower() in BLOCKS_FIELD)
+        r["blocks"] = [f["id"] for f in open_items
+                       if mentions(named, [f["id"]]) or rid and mentions(f.get("blocked"), [rid])]
+        r["milestones"] = [m["name"] for m in b["milestones"]
+                           if rid and not (m["total"] and m["done"] == m["total"])   # a complete one waits on nothing
+                           and mentions(m["definition_of_done"], [rid])]
+        r["cites"] = [i for i in mentions(" ".join([r["text"], r["body"]] + [v for _, v in r["fields"]]), ids)
+                      if i != rid]
+        r["overdue"] = bool(r["due"] and r["due"] < today)
+    # the soonest due first, then what holds up the most; the file's order otherwise
+    order = lambda r: (r["due"] is None, r["due"] or "", -len(r["blocks"]))
+    return {"actions": sorted((r for r in rows if r["kind"] == "action"), key=order),
+            "questions": sorted((r for r in rows if r["kind"] == "question"), key=order),
+            "later": later, "overdue": sum(r["overdue"] for r in rows),
+            "last": last_numbers(md, read("harness/STATE.md")),
+            "to_move": {"STATE.md": len(st["open_questions"]), "OPEN-DECISIONS.md": len(legacy) - len(st["open_questions"])}
+            if (ROOT / "harness/WAITING.md").exists() else {}}
+
+
+def waiting_warnings(w):
+    """Questions still in their old place once the project has a harness/WAITING.md."""
+    return [f"{n} open {'question' if n == 1 else 'questions'} still in harness/{src} — move "
+            f"{'it' if n == 1 else 'them'} to harness/WAITING.md: what the user must do themselves becomes an "
+            f"action (A<n>), the rest stay questions (AGENTS.md §5, rule 10)"
+            for src, n in w["to_move"].items() if n]
 
 
 def artifacts():
@@ -361,10 +448,12 @@ def collect():
     if missing:
         warnings.append("missing: " + ", ".join(missing))
     st = state()
+    w = waiting(st, b)
+    warnings += waiting_warnings(w)
     return {"project": b["project"] or ROOT.name,
             "generated": datetime.datetime.now().isoformat(timespec="seconds"),
             "goal": goal(), "state": st, "backlog": b, "eval": evals(), "plan": plan(),
-            "decisions": decisions(), "waiting": waiting(st, b, open_decisions()), "artifacts": artifacts(),
+            "decisions": decisions(), "waiting": w, "artifacts": artifacts(),
             "git": git(), "checks": checks(), "warnings": warnings}
 
 

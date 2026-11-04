@@ -38,7 +38,7 @@ teammate never see it. So:
 2. **Don't write it twice.** If it's in the code, don't restate it in docs.
 3. **State, not diary.** `STATE.md` says where we are now, not what happened.
 4. **Surface contradictions, don't auto-merge them.** Two notes that clash may
-   each be right in their context — flag it in `STATE.md` open questions, a human decides.
+   each be right in their context — flag it as a question in `WAITING.md`, a human decides.
 5. **Let stale knowledge decay.** Flag it for review (monthly); don't let skills
    and docs calcify. Delete what no longer earns its place — *build to delete*.
 

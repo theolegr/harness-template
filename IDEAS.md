@@ -28,6 +28,7 @@ test, which will show what the agent actually uses.
 | I-16 | More guard hardening | S | open |
 | I-17 | Adopt skills that land in `.claude/skills/` | S | open |
 | I-18 | Disk space taken by parallel worktrees | S | decided — warn and suggest, done |
+| I-19 | Tell what the user must do from what they must answer | S | decided — `WAITING.md`, Q and A, done |
 
 Sources: own ideas, and a comparison with [pi](https://github.com/earendil-works/pi)
 (commit `69f0be6`, 2026-10-02) — see *Context* at the end. I-14 to I-17: the first real project
@@ -259,6 +260,38 @@ Both hold; our risk is doctrine piling up before it's been tested.
 
 <!-- ### I-XX — <idea> · <date>
 Chose <option> because <reason>. Done in <commit / file>. -->
+
+### I-19 — Tell what the user must do from what they must answer · 2026-11-04
+
+**Evidence (three real projects, read on 2026-11-02).** Everything that waited on
+the user was an "open question" in `STATE.md`, but much of it was work only they
+could do. canary: 5 of its 7 "questions" were actions (an API key with a spend
+limit, two tokens typed into the server's env file, secrets to move out of Notion,
+an SSH passphrase), and its deploy waited on three of them. pebble: 26 questions
+and 25 blocked items, the actions hidden in the blocked reasons (accountant →
+registration → bank → Stripe, a lawyer's review, a domain then a mailbox to warm
+up, Cloudflare tokens); 4 dates already past with nothing to show it; history
+piling up inside the lines (one held 1,790 characters). The third project had
+almost only decisions. None used `OPEN-DECISIONS.md`, and the user saw no
+difference between a question and an open decision: both are answered in a
+sentence.
+
+Chose **two kinds in one file**, `harness/WAITING.md`: **Q** (answer in a
+sentence: a choice with a recommendation, a fact, an OK) and **A** (do it
+yourself, outside the session, with `Done when:` what the agent checks). One
+short line each with optional `Reco:` / `Done when:` / `Blocks:` / `By:` fields;
+`## Later` for what blocks nothing yet; numbers never reused (`Last numbers`).
+A blocked item cites the number instead of repeating the text. `STATE.md` loses
+its Open questions section (it stays short, as canary asked). The dashboard
+shows Actions and Questions side by side, soonest due first, overdue in red,
+*Later* folded; the status at session start lists them, overdue first; a
+blocked item's chip says A or Q. Rejected: three kinds Q / OD / A (the user saw
+no use for the third), a section in `STATE.md` (the file read at every boot
+keeps growing). Projects set up before: `--update` adds the file, the old
+Open questions and `OPEN-DECISIONS.md` are still read, as questions, and the
+status asks the agent to move them. Done in `state.py`, `dashboard.py`,
+`harness-status.sh`, `AGENTS.md` rule 10; tests in `tests/test_dashboard.py` and
+`tests/smoke-install.sh`.
 
 ### I-18 — Disk space taken by parallel worktrees · 2026-10-10
 

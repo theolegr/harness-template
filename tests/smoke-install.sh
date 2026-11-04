@@ -32,7 +32,7 @@ run "$ROOT/init-harness.sh" --no-interview --name "Smoke Test" --type cli "$DEMO
 cd "$DEMO"
 [ -z "$(git rev-list --all)" ] || fail "the install made a commit"
 STAGED="$(git diff --cached --name-only)"
-for f in AGENTS.md CLAUDE.md .gitignore .claude/settings.json harness/FEATURES.json harness/scripts/hooks/guard-bash.py; do
+for f in AGENTS.md CLAUDE.md .gitignore .claude/settings.json harness/FEATURES.json harness/WAITING.md harness/scripts/hooks/guard-bash.py; do
   printf '%s\n' "$STAGED" | grep -qxF "$f" || fail "not staged after install: $f"
 done
 if printf '%s\n' "$STAGED" | grep -qxF .env; then fail ".env was staged"; fi
@@ -110,6 +110,9 @@ echo "# new" > "$P/guide/NEW.md"                                                
 edit harness/guide/MEMORY.md 's + "\nuser: memory\n"'
 edit harness/guide/BOOT.md   's + "\nuser: boot\n"'
 git rm -q harness/guide/SKILLS.md                                               # deleted → not re-added
+# installed before WAITING.md existed: not in the project nor in its base, and a question still in STATE.md
+git rm -q harness/WAITING.md && rm harness/template/project/harness/WAITING.md
+edit harness/STATE.md 's + "\n## Open questions\n\n- **Q1** — An old question\n"'
 git commit -qam "smoke: user edits"
 GOAL_BEFORE="$(cat harness/GOAL.md)"
 
@@ -125,5 +128,20 @@ has harness/guide/BOOT.md.harness-new "template: boot"
 [ ! -e harness/guide/SKILLS.md ] || fail "--update re-added a file the user deleted"
 [ -e harness/guide/NEW.md ] || fail "--update didn't add a new template file"
 has harness/FEATURES.json "Smoke feature"
+[ -e harness/WAITING.md ] || fail "--update didn't add harness/WAITING.md to a project set up before it"
+has "$WORK/out.log" "New: harness/WAITING.md"
+./harness/scripts/harness-status.sh >"$WORK/status.log" 2>&1 || fail "harness-status.sh after the update"
+has "$WORK/status.log" "1 open question still in harness/STATE.md"
+
+step "update again: WAITING.md is the project's data"
+edit harness/WAITING.md 's.replace("## Actions\n", "## Actions\n\n- **A1** — Paste the key · Done when: it answers\n")'
+edit "$P/WAITING.md" 's + "\ntemplate: waiting\n"'
+git add -A && git commit -qm "smoke: after update"
+WAITING_BEFORE="$(cat harness/WAITING.md)"
+run "$TPL/init-harness.sh" --update "$DEMO"
+[ "$(cat harness/WAITING.md)" = "$WAITING_BEFORE" ] || fail "--update changed WAITING.md (project data)"
+[ ! -e harness/WAITING.md.harness-new ] || fail "--update left a WAITING.md.harness-new"
+./harness/scripts/harness-status.sh >"$WORK/status.log" 2>&1 || fail "harness-status.sh"
+has "$WORK/status.log" "✋ A1 Paste the key"
 
 printf '\n✓ smoke install passed\n'

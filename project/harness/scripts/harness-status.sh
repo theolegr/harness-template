@@ -52,6 +52,36 @@ else
   echo "  ⚠ $H/FEATURES.json missing"
 fi
 
+echo
+echo "── WAITING ON YOU ── ($H/WAITING.md)"
+python3 - <<'PY' || echo "  ⚠ could not read what waits on you (./harness/scripts/state.py shows the error)"
+import sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, "harness/scripts")
+from state import backlog, state, waiting, waiting_warnings   # same reading as the dashboard
+w = waiting(state(), backlog())
+for x in waiting_warnings(w):
+    print(f"  ⚠ {x}")
+acts, qs = w["actions"], w["questions"]
+def line(r, mark):
+    when = f" (by {r['due']})" if r["due"] and not r["overdue"] else ""
+    late = f" — OVERDUE since {r['due']}" if r["overdue"] else ""
+    text = r["text"] if len(r["text"]) <= 80 else r["text"][:79].rstrip() + "…"
+    return f"  {mark} {r['id'] or '•'} {text}{when}{late}"
+shown = 0
+for mark, rows in (("✋", acts), ("❓", qs)):
+    for r in rows[:5]:   # the soonest due first, then what holds up the most
+        print(line(r, "⏰" if r["overdue"] else mark))
+        shown += 1
+more = len(acts) + len(qs) - shown
+if more:
+    print(f"  … {more} more — the dashboard lists them all")
+if w["later"]:
+    print(f"  later: {len(w['later'])}")
+if not (acts or qs or w["later"]):
+    print("  ✓ nothing")
+PY
+
 # disk running low → what this project could free (worktrees, leftover builds); silent otherwise
 python3 $H/scripts/disk.py --warn 2>/dev/null || true
 
@@ -74,7 +104,7 @@ fi
 
 echo
 echo "── FILES ──"
-for f in AGENTS.md CLAUDE.md $H/GOAL.md $H/STATE.md $H/FEATURES.json $H/EVAL.md $H/PLAN.md $H/DECISIONS.md $H/guide/BOOT.md; do
+for f in AGENTS.md CLAUDE.md $H/GOAL.md $H/STATE.md $H/WAITING.md $H/FEATURES.json $H/EVAL.md $H/PLAN.md $H/DECISIONS.md $H/guide/BOOT.md; do
   if [ -f "$f" ]; then
     printf "  ✓ %s\n" "$f"
   else
