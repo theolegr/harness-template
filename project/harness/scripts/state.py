@@ -239,7 +239,8 @@ def plan():
 
 def decisions():
     out = []
-    for m in re.finditer(r"^## (\d{4}-\d{2}-\d{2}) — (.+)$(.*?)(?=^## |\Z)", read("harness/DECISIONS.md"),
+    # the title stops at its line: with re.S, (.+) would swallow every decision after the first
+    for m in re.finditer(r"^## (\d{4}-\d{2}-\d{2}) — ([^\n]+)$(.*?)(?=^## |\Z)", read("harness/DECISIONS.md"),
                          flags=re.M | re.S):
         if not filled(m.group(2)):
             continue
