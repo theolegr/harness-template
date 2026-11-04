@@ -30,6 +30,7 @@ from state import BLOCKS_FIELD, DID, ROOT, WREF, collect  # noqa: E402
 
 OUT = ROOT / "harness" / "dashboard.html"
 RELOAD = 30   # seconds: an open tab picks up a rewrite (the Stop hook's, --watch's) on its own
+WAITING_TOP = 3   # actions, questions: the first ones shown, the rest one click away
 # a Markdown link, an autolink, a bare URL — http(s) only
 URL = re.compile(r"\[([^\]\n]+)\]\((https?://(?:[^\s()]|\([^\s()]*\))+)\)|<(https?://[^\s>]+)>|(https?://[^\s<>\[\]`\"']+)")
 
@@ -317,14 +318,22 @@ def waiting(w, b):
         return ""
     names = {f.get("id"): f.get("name") for f in b["in_progress"] + b["todo"] + b["blocked"]}
     kinds = {r["id"]: r["kind"] for r in acts + qs + later if r["id"]}
-    rows = lambda rs, key: "".join(wrow(r, f"w-{r['id'] or f'{key}-{n}'}", names, kinds)
-                                  for n, r in enumerate(rs, 1))
+
+    def rows(rs, key, keep=None):
+        """The rows, already in order (soonest due, then what holds up the most): the first `keep` shown,
+        the rest folded under "N more"."""
+        out = [wrow(r, f"w-{r['id'] or f'{key}-{n}'}", names, kinds) for n, r in enumerate(rs, 1)]
+        if not keep or len(out) <= keep:
+            return "".join(out)
+        n = len(out) - keep
+        return ("".join(out[:keep]) + f'<details class="more" data-key="more:{key}"><summary>{n} more '
+                f'{key if n > 1 else key[:-1]}{chev()}</summary>{"".join(out[keep:])}</details>')
     cols = []
     for title, hint, rs in (("Actions", "do them, then say so: the agent checks", acts),
                             ("Questions", "answer in a session: the agent records it", qs)):
         if rs:
             cols.append(f'<div><h3 class="group">{title} <span class="count">{len(rs)}</span></h3>'
-                        f'<p class="hint">{hint}</p><div class="items">{rows(rs, title.lower())}</div></div>')
+                        f'<p class="hint">{hint}</p><div class="items">{rows(rs, title.lower(), WAITING_TOP)}</div></div>')
     rest = (fold("later", 'Later <span class="src">nothing waits on these yet</span>',
                  f'<div class="items">{rows(later, "later")}</div>', len(later)) if later else "")
     return (f'<section class="card waiting" id="waiting"><div class="backlog-head"><h2>Waiting on you</h2>'
@@ -774,6 +783,7 @@ font-size:13px}
 .open-row .mark{justify-self:start;text-align:center;color:var(--ink);white-space:nowrap;min-width:30px;padding:0 5px;
 border:1px solid var(--border);border-radius:6px;line-height:18px;margin-top:1px}
 .k-action .mark{border-color:var(--warning)}.k-question .mark{border-color:var(--critical)}
+.waiting .more>summary{padding-left:64px}
 .open-row .facts{padding-left:64px}
 .prose-body{padding:0 6px 12px 64px;font-size:13px;color:var(--ink-2)}
 .prose-body p+p,.prose-body p+ul,.prose-body ul+p{margin-top:6px}
@@ -874,11 +884,12 @@ document.querySelectorAll('.chart-wrap').forEach(w => {
   hit.addEventListener('mouseleave', hide);
 });
 
-// a link to a row of the page (A2 → its action, F-010 → its item) unfolds it, and the fold it sits in
-document.addEventListener('click', e => {
-  const a = e.target.closest('a[href^="#"]'), t = a && document.getElementById(decodeURIComponent(a.hash.slice(1)));
-  for (let d = t; d; d = d.parentElement && d.parentElement.closest('details')) if (d.tagName === 'DETAILS') d.open = true;
-});
+// a link to a row of the page (A2 → its action, F-010 → its item) unfolds it, and the folds it sits in
+// ("2 more actions", "4 more shipped") — on a click, and for the page's own #anchor once it loads
+const unfold = t => { for (let d = t; d; d = d.parentElement && d.parentElement.closest('details')) if (d.tagName === 'DETAILS') d.open = true; };
+const target = hash => hash.length > 1 && document.getElementById(decodeURIComponent(hash.slice(1)));
+document.addEventListener('click', e => { const a = e.target.closest('a[href^="#"]'); if (a) unfold(target(a.hash)); });
+unfold(target(location.hash));
 
 try { const y = Number(sessionStorage.getItem('harness-scroll')); if (y) window.scrollTo(0, y); } catch (e) {}
 addEventListener('pagehide', () => { try { sessionStorage.setItem('harness-scroll', String(scrollY)); } catch (e) {} });

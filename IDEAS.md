@@ -395,6 +395,8 @@ for little more than `harness-status.sh`).
   names the item in progress, the last session moved there from the State
   panel, a milestone's left ids folded out with their names, a shipped item's
   priority folded out, the Done list cut to the 3 newest (Up next to 8), the
-  rest one click away. Drawn icons instead of ▶ ⛔ ✓ emoji. `state.py` read
+  rest one click away; the same for the actions and the questions waiting on
+  the user, 3 of each (soonest due, then what holds up the most), each list
+  unfolded on its own. Drawn icons instead of ▶ ⛔ ✓ emoji. `state.py` read
   only the first decision of `DECISIONS.md` (its title swallowed the rest):
   fixed.

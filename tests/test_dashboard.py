@@ -156,6 +156,10 @@ def main():
     check("rows have anchors", all(f'id="{a}"' in page for a in ("w-A2", "w-Q8", "w-questions-4", "w-Q5", "item-F-010")))
     check("overdue shown on A3", '<span class="chip overdue" title="to settle by 2000-01-01">overdue · Jan 1</span>' in page)
     check("later folded", 'data-key="later"' in page)
+    check("questions: the top 3 shown, the 4th (unnumbered, last in order) folded",
+          'data-key="more:questions"><summary>1 more question<' in page
+          and page.index('id="w-Q9"') < page.index('data-key="more:questions"') < page.index('id="w-questions-4"'))
+    check("actions: 2, none folded", 'data-key="more:actions"' not in page)
     check("a blocked item links to the action it waits on", 'class="chip a" href="#w-A2"' in page)
     check("… and to the question", 'class="chip q" href="#w-Q8"' in page)
     check("A1 (given once, now settled): grey", 'class="chip a unknown"' in page and ">A1?<" in page)
